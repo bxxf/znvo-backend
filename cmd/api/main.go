@@ -1,14 +1,33 @@
 package main
 
 import (
+	"context"
+
 	"github.com/bxxf/znvo-backend/internal/server"
+	"go.uber.org/fx"
 )
 
 func main() {
-	server := server.NewServer()
+	app := fx.New(
+		fx.Provide(
+			server.NewServer,
+		),
+		fx.Invoke(
+			func(s *server.Server) {
+				s.ListenAndServe()
+			},
+		),
+	)
 
-	err := server.ListenAndServe()
-	if err != nil {
-		panic("cannot start server")
+	ctx := context.Background()
+	if err := app.Start(ctx); err != nil {
+		panic(err)
 	}
+
+	<-app.Done()
+
+	if err := app.Stop(ctx); err != nil {
+		panic(err)
+	}
+
 }
