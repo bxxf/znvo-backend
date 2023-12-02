@@ -4,11 +4,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bxxf/znvo-backend/internal/constants"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/joho/godotenv"
 	"go.uber.org/fx"
 )
+
+var ENV_VALUES = []string{"PORT"}
 
 type Config struct {
 	Port string
@@ -34,7 +35,7 @@ func load(logger *logger.LoggerInstance) map[string]string {
 		}
 	}
 	// Loop through environment variables and check if they exist
-	for _, key := range constants.ENV_VALUES {
+	for _, key := range ENV_VALUES {
 		values[key] = os.Getenv(key)
 		if values[key] == "" {
 			// if the name of the key includes optional then it is not required
