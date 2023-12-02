@@ -11,6 +11,10 @@ build:
 run:
 	@go run cmd/api/main.go
 
+protogen:
+	@echo "Generating proto files..."
+	@buf generate
+
 # Test the application
 test:
 	@echo "Testing..."
