@@ -12,16 +12,16 @@ func (s *Server) defineRoutes() *http.ServeMux {
 
 	mux.Handle(authconnect.NewAuthServiceHandler(s.authRouter))
 
-	reflector := grpcreflect.NewStaticReflector(
-		"auth.v1.AuthService",
-	)
+	// Add reflection for development
+	if s.config.Env == "development" {
 
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+		reflector := grpcreflect.NewStaticReflector(
+			"auth.v1.AuthService",
+		)
 
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+		mux.Handle(grpcreflect.NewHandlerV1(reflector))
+		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	}
 
 	return mux
 }

@@ -37,6 +37,7 @@ type loggerImpl struct {
 
 // NewLogger returns a new instance of Logger with the specified log level
 func NewLogger() *LoggerInstance {
+
 	logLevel := getLogLevelForEnvironment()
 	return &LoggerInstance{
 		loggerImpl: loggerImpl{
@@ -60,7 +61,9 @@ func (l *loggerImpl) log(messageLevel LogLevel, levelLabel string, args ...inter
 		shortFile := filepath.Base(file)
 
 		color := getColorForLevel(messageLevel)
-		fmt.Printf("%s%s [%s] %s:%d %v%s\n", color, time.Now().Format(time.RFC3339), levelLabel, shortFile, line, args, colorReset)
+		str := fmt.Sprintf("%s%s [%s] %s:%d %v%s\n", color, time.Now().Format(time.RFC3339), levelLabel, shortFile, line, args, colorReset)
+
+		fmt.Print(str)
 	}
 }
 

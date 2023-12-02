@@ -21,7 +21,6 @@ func main() {
 		),
 		fx.Invoke(
 			func(s *server.Server) {
-
 			},
 			func(c *config.Config) {
 			}),
