@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	authv1 "github.com/bxxf/znvo-backend/gen/proto/go/api/auth/v1"
+	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
 )
 
 type AuthRouter struct {

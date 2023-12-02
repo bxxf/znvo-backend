@@ -4,7 +4,7 @@ syntax = "proto3";
 
 package auth.v1;
 
-option go_package = "github.com/bxxf/znvo-backend/gen/proto/go/api/auth/v1;auth";
+option go_package = "github.com/bxxf/znvo-backend/gen/api/auth/v1;auth";
  
 service AuthService {
   rpc RegisterUser (RegisterUserRequest) returns (RegisterUserResponse) {}
