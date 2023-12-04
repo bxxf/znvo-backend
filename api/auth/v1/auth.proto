@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/struct.proto";
 
 // # Auth service (v1)
 
@@ -7,17 +8,13 @@ package auth.v1;
 option go_package = "github.com/bxxf/znvo-backend/gen/api/auth/v1;auth";
  
 service AuthService {
-  rpc RegisterUser (RegisterUserRequest) returns (RegisterUserResponse) {}
+  rpc InitializeRegister (InitializeRegisterRequest) returns (InitializeRegisterResponse) {}
 }
 
-message RegisterUserRequest {
-  string email = 1;
-  string password = 2;
+message InitializeRegisterRequest {
 }
 
-message RegisterUserResponse {
-  string id = 1;
-  string email = 2;
-  string created_at = 3;
-  string updated_at = 4;
+message InitializeRegisterResponse {
+  string sid = 1;
+  string options = 2;
 }

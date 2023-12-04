@@ -5,22 +5,61 @@ import (
 
 	"connectrpc.com/connect"
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
+	"github.com/bxxf/znvo-backend/internal/auth/service"
+	"github.com/bxxf/znvo-backend/internal/logger"
+	sessionUtils "github.com/bxxf/znvo-backend/internal/session/utils"
+	"github.com/google/uuid"
+	jsoniter "github.com/json-iterator/go"
 )
 
+/* ------------------ AuthRouter Definition ------------------ */
 type AuthRouter struct {
+	logger      *logger.LoggerInstance
+	authService *service.AuthService
 }
 
-func NewAuthRouter() *AuthRouter {
-	return &AuthRouter{}
+func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService) *AuthRouter {
+	return &AuthRouter{
+		logger:      logger,
+		authService: authService,
+	}
 }
 
-func (a *AuthRouter) RegisterUser(ctx context.Context, req *connect.Request[authv1.RegisterUserRequest]) (*connect.Response[authv1.RegisterUserResponse], error) {
-	email := req.Msg.Email
-	password := req.Msg.Password
+/* ------------------ Global Variables ------------------ */
 
-	if email == "" || password == "" {
-		return nil, MissingEmailOrPassword
+// Defining global variables - webauthn and jsoniter
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+/* ------------------ Authenticatiom Functions ------------------ */
+
+func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Request[authv1.InitializeRegisterRequest]) (*connect.Response[authv1.InitializeRegisterResponse], error) {
+
+	// Generate random user ID
+	userId := uuid.New().String()
+	ar.logger.Debug("Initializing registration for user " + userId)
+
+	// Initialize registration process thru webauthn
+	sessionData, options, err := ar.authService.InitializeRegister(userId)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
 	}
 
-	return nil, nil
+	// Encode options to JSON
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
+	sessionID := sessionUtils.NewSession(sessionData)
+
+	response := &connect.Response[authv1.InitializeRegisterResponse]{
+		Msg: &authv1.InitializeRegisterResponse{
+			Sid:     sessionID,
+			Options: string(optionsJSON),
+		},
+	}
+	return response, nil
 }
