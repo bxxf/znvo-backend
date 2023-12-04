@@ -1,5 +1,6 @@
 package config
 
+// Config - configuration for the application, it defines which environment variables must be defined and fetches them into a struct
 import (
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"go.uber.org/fx"

@@ -1,5 +1,6 @@
 package service
 
+// Services - contains all the logic used by the router, but no work with the data
 import (
 	"log"
 

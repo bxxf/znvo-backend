@@ -37,3 +37,5 @@ func GetOriginAndRpId(config *config.Config) (rpId string, origin string) {
 	return rpid, currentOrigin
 
 }
+
+// Idea: Get rid of this and fetch origin from config
