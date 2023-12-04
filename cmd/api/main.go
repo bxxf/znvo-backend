@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/bxxf/znvo-backend/internal/auth/router"
+	"github.com/bxxf/znvo-backend/internal/auth/service"
 	"github.com/bxxf/znvo-backend/internal/config"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/server"
@@ -16,6 +17,7 @@ func main() {
 		fx.Provide(
 			logger.NewLogger,
 			config.NewConfig,
+			service.NewAuthService,
 			router.NewAuthRouter,
 			server.NewServer,
 		),
