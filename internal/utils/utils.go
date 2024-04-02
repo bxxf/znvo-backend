@@ -20,7 +20,7 @@ func GetOriginAndRpId(config *config.Config) (rpId string, origin string) {
 	var currentOrigin string
 
 	if !isOnFly {
-		currentOrigin = "http://localhost:" + config.Port
+		currentOrigin = "http://localhost:" + config.FrontendPort
 	} else {
 		currentOrigin = "https://" + os.Getenv("FLY_APP_NAME") + ".fly.dev"
 	}

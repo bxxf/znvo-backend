@@ -5,11 +5,13 @@ import (
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
-var ENV_VALUES = []string{"PORT"}
+// ENV_VALUES - list of environment variables that must be defined
+var ENV_VALUES = []string{"PORT", "FRONTEND_PORT"}
 
 type Config struct {
-	Port string
-	Env  string
+	FrontendPort string
+	Port         string
+	Env          string
 }
 
 func NewConfig(logger *logger.LoggerInstance) *Config {
@@ -21,7 +23,8 @@ func NewConfig(logger *logger.LoggerInstance) *Config {
 	}
 
 	return &Config{
-		Port: values["PORT"],
-		Env:  values["ENV"],
+		Port:         values["PORT"],
+		FrontendPort: values["FRONTEND_PORT"],
+		Env:          values["ENV"],
 	}
 }

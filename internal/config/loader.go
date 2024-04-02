@@ -4,13 +4,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/joho/godotenv"
+
+	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 func load(logger *logger.LoggerInstance) map[string]string {
 	// Create map for environment variables
 	var values map[string]string = make(map[string]string)
+	logger.Info("Loading environment variables: " + strings.Join(ENV_VALUES, ",") + ". Edit these in 'config/config.go'")
 	// Load .env file only if not in production
 	if os.Getenv("ENV") != "production" {
 		err := godotenv.Load()

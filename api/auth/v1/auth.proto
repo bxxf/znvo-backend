@@ -9,6 +9,7 @@ option go_package = "github.com/bxxf/znvo-backend/gen/api/auth/v1;auth";
  
 service AuthService {
   rpc InitializeRegister (InitializeRegisterRequest) returns (InitializeRegisterResponse) {}
+  rpc FinishRegister (FinishRegisterRequest) returns (FinishRegisterResponse) {}
 }
 
 message InitializeRegisterRequest {
@@ -17,4 +18,16 @@ message InitializeRegisterRequest {
 message InitializeRegisterResponse {
   string sid = 1;
   string options = 2;
+}
+
+message FinishRegisterRequest {
+  string sid = 1;
+  string userid = 2;
+  string credid = 3;
+  string clientdata = 4;
+  string attestation = 5;
+}
+
+message FinishRegisterResponse {
+  string token = 1;
 }
