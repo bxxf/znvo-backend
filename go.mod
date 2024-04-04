@@ -5,6 +5,7 @@ go 1.21.4
 require (
 	connectrpc.com/connect v1.13.0
 	connectrpc.com/grpcreflect v1.2.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/rs/cors v1.10.1
 )
 

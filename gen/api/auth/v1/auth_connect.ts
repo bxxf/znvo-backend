@@ -5,7 +5,7 @@
 
 // # Auth service (v1)
 
-import { FinishRegisterRequest, FinishRegisterResponse, InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
+import { FinishRegisterRequest, FinishRegisterResponse, GetUserRequest, GetUserResponse, InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -30,6 +30,15 @@ export const AuthService = {
       name: "FinishRegister",
       I: FinishRegisterRequest,
       O: FinishRegisterResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc auth.v1.AuthService.GetUser
+     */
+    getUser: {
+      name: "GetUser",
+      I: GetUserRequest,
+      O: GetUserResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -4,12 +4,15 @@ import (
 	"context"
 	"log"
 
+	"go.uber.org/fx"
+
 	"github.com/bxxf/znvo-backend/internal/auth/router"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
+	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/key"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/server"
-	"go.uber.org/fx"
 )
 
 func main() {
@@ -20,6 +23,8 @@ func main() {
 			service.NewAuthService,
 			router.NewAuthRouter,
 			server.NewServer,
+			key.NewKeyRepository,
+			token.NewTokenRepository,
 		),
 		fx.Invoke(
 			func(s *server.Server) {

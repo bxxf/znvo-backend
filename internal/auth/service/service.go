@@ -12,7 +12,8 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	jsoniter "github.com/json-iterator/go"
 
-	authUtils "github.com/bxxf/znvo-backend/internal/auth/utils"
+	"github.com/bxxf/znvo-backend/internal/auth/model"
+	authUtils "github.com/bxxf/znvo-backend/internal/auth/util"
 	"github.com/bxxf/znvo-backend/internal/config"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
@@ -21,14 +22,6 @@ import (
 type AuthService struct {
 	logger           *logger.LoggerInstance
 	webAuthnInstance *webauthn.WebAuthn
-}
-
-/* ------------------ Global Variables ------------------ */
-
-// Settings for webauthn registration
-var authSelection = protocol.AuthenticatorSelection{
-	RequireResidentKey: protocol.ResidentKeyRequired(),
-	UserVerification:   protocol.VerificationPreferred,
 }
 
 func NewAuthService(logger *logger.LoggerInstance, config *config.Config) *AuthService {
@@ -49,7 +42,7 @@ func NewAuthService(logger *logger.LoggerInstance, config *config.Config) *AuthS
 func (as *AuthService) InitializeRegister(uuid string) (*webauthn.SessionData, *protocol.CredentialCreation, error) {
 
 	// Create new user
-	user := authUtils.NewWebAuthnUser(
+	user := model.NewWebAuthnUser(
 		[]byte(uuid), uuid,
 	)
 
@@ -66,7 +59,7 @@ func (as *AuthService) InitializeRegister(uuid string) (*webauthn.SessionData, *
 func (as *AuthService) FinishRegister(session *webauthn.SessionData, userId string, resBody map[string]interface{}) (*webauthn.Credential, error) {
 	session.Challenge = base64.RawStdEncoding.EncodeToString([]byte(session.Challenge))
 
-	wUser := authUtils.NewWebAuthnUser(
+	wUser := model.NewWebAuthnUser(
 		[]byte(userId), userId,
 	)
 
@@ -89,9 +82,7 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userId stri
 		return nil, fmt.Errorf("failed to finish registration: %v", err)
 	}
 
-	go func() {
-		authUtils.UserCredentials[userId] = user
-	}()
+	authUtils.UserCredentials[userId] = user
 
 	return user, nil
 }

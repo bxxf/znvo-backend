@@ -15,16 +15,6 @@ protogen:
 	@echo "Generating proto files..."
 	@buf generate
 
-# Test the application
-test:
-	@echo "Testing..."
-	@go test ./tests -v
-
-# Clean the binary
-clean:
-	@echo "Cleaning..."
-	@rm -f main
-
 # Live Reload
 watch:
 	@if [ -x "$(GOPATH)/bin/air" ]; then \
@@ -42,4 +32,8 @@ watch:
 	    fi; \
 	fi
 
-.PHONY: all build run test clean
+key:
+	@echo "Generating keys..."
+	@openssl genpkey -algorithm RSA -out ./keys/private_key.pem -pkeyopt rsa_keygen_bits:2048
+	@openssl rsa -pubout -in ./keys/private_key.pem -out ./keys/public_key.pem
+	@awk 'BEGIN {ORS="\\n"} {print} END {print ""}' ./keys/private_key.pem > ./keys/private_key_formatted.pem

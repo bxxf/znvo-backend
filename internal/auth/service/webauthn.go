@@ -3,12 +3,21 @@ package service
 import (
 	"log"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"github.com/bxxf/znvo-backend/internal/config"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/utils"
 )
+
+/* ------------------ Global Variables ------------------ */
+
+// Settings for webauthn registration
+var authSelection = protocol.AuthenticatorSelection{
+	RequireResidentKey: protocol.ResidentKeyRequired(),
+	UserVerification:   protocol.VerificationPreferred,
+}
 
 func NewWebAuthnClient(logger *logger.LoggerInstance, config *config.Config) (*webauthn.WebAuthn, error) {
 	// Fetch origin from utils based on if app is hosted on fly
