@@ -1,8 +1,8 @@
 package config
 
+// Config - configuration for the application, it defines which environment variables must be defined and fetches them into a struct
 import (
 	"github.com/bxxf/znvo-backend/internal/logger"
-	"go.uber.org/fx"
 )
 
 var ENV_VALUES = []string{"PORT"}
@@ -12,7 +12,7 @@ type Config struct {
 	Env  string
 }
 
-func NewConfig(lc fx.Lifecycle, logger *logger.LoggerInstance) *Config {
+func NewConfig(logger *logger.LoggerInstance) *Config {
 	values := load(logger)
 
 	// Fallback ENV to development

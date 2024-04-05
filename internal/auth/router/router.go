@@ -1,13 +1,15 @@
 package router
 
+// Routers - defines structure for gRPC requests and responses and format the data to the correct format
+
 import (
 	"context"
 
 	"connectrpc.com/connect"
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
+	sessionUtils "github.com/bxxf/znvo-backend/internal/auth/session/utils"
 	"github.com/bxxf/znvo-backend/internal/logger"
-	sessionUtils "github.com/bxxf/znvo-backend/internal/session/utils"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 )
