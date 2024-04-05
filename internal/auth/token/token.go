@@ -13,8 +13,9 @@ import (
 )
 
 type AccessTokenClaims struct {
-	UserID string `json:"userId"`
-	Exp    int64  `json:"exp"`
+	UserID    string `json:"userId"`
+	Exp       int64  `json:"exp"`
+	PublicKey string `json:"publicKey"`
 
 	jwt.StandardClaims
 }
@@ -38,9 +39,9 @@ func NewTokenRepository(keyRepository *key.Repository, config *config.Config, lo
 	}
 }
 
-func (r *TokenRepository) CreateAccessToken(userID string) (string, error) {
+func (r *TokenRepository) CreateAccessToken(publicKey string, userID string) (string, error) {
 	expiry := time.Now().Add(time.Minute * 15)
-	token, err := r.generateJWT(userID, expiry.Unix())
+	token, err := r.generateJWT(userID, publicKey, expiry.Unix())
 	if err != nil {
 		log.Printf("could not generate token: %v", err)
 		return "", fmt.Errorf("could not generate token: %w", err)

@@ -11,6 +11,8 @@ service AuthService {
   rpc InitializeRegister (InitializeRegisterRequest) returns (InitializeRegisterResponse) {}
   rpc FinishRegister (FinishRegisterRequest) returns (FinishRegisterResponse) {}
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
+  rpc InitializeLogin (InitializeLoginRequest) returns (InitializeLoginResponse) {}
+  rpc FinishLogin (FinishLoginRequest) returns (FinishLoginResponse) {}
 }
 
 message InitializeRegisterRequest {
@@ -39,4 +41,26 @@ message GetUserRequest {
 
 message GetUserResponse {
   string id = 1;
+}
+
+message InitializeLoginRequest {
+  string userid = 1;
+}
+
+message InitializeLoginResponse {
+  string sid = 1;
+  string options = 2;
+}
+
+message FinishLoginRequest {
+  string userid = 1;
+  string sid = 2;
+  string credid = 3;
+  string authdata = 4;
+  string clientdata = 5;
+  string signature = 6;
+}
+
+message FinishLoginResponse {
+  string token = 1;
 }

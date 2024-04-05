@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
+	"github.com/bxxf/znvo-backend/gen/api/auth/v1/authconnect"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/auth/util"
@@ -21,10 +22,15 @@ import (
 )
 
 /* ------------------ AuthRouter Definition ------------------ */
+
 type AuthRouter struct {
 	logger          *logger.LoggerInstance
 	authService     *service.AuthService
 	tokenRepository *token.TokenRepository
+}
+
+type Definer interface {
+	authconnect.AuthServiceHandler
 }
 
 func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository) *AuthRouter {
@@ -72,6 +78,7 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 	}
 	return response, nil
 }
+
 func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[authv1.FinishRegisterRequest]) (*connect.Response[authv1.FinishRegisterResponse], error) {
 	// Usingchannels to get session data concurrently
 	sessionDataChan := make(chan *webauthn.SessionData, 1)
@@ -118,7 +125,7 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 		return nil, err
 	}
 
-	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey))
+	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
 	if err != nil {
 		ar.logger.Error(err.Error())
 		return nil, err
@@ -145,6 +152,96 @@ func (ar *AuthRouter) GetUser(ctx context.Context, req *connect.Request[authv1.G
 	response := &connect.Response[authv1.GetUserResponse]{
 		Msg: &authv1.GetUserResponse{
 			Id: user.UserID,
+		},
+	}
+
+	return response, nil
+}
+
+func (ar *AuthRouter) InitializeLogin(ctx context.Context, req *connect.Request[authv1.InitializeLoginRequest]) (*connect.Response[authv1.InitializeLoginResponse], error) {
+	userID := req.Msg.GetUserid()
+	ar.logger.Debug("Initializing login for user " + userID)
+
+	// Initialize login process thru webauthn
+	sessionData, options, err := ar.authService.InitializeLogin(userID)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+	// Encode options to JSON
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
+	sessionID := util.NewSession(sessionData)
+
+	response := &connect.Response[authv1.InitializeLoginResponse]{
+		Msg: &authv1.InitializeLoginResponse{
+			Sid:     sessionID,
+			Options: string(optionsJSON),
+		},
+	}
+	return response, nil
+}
+
+func (ar *AuthRouter) FinishLogin(ctx context.Context, req *connect.Request[authv1.FinishLoginRequest]) (*connect.Response[authv1.FinishLoginResponse], error) {
+	// Usingchannels to get session data concurrently
+	sessionDataChan := make(chan *webauthn.SessionData, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		sessionData, ok := util.GetSession(req.Msg.GetSid())
+		if !ok {
+			errChan <- MissingSession
+			return
+		}
+		sessionDataChan <- sessionData
+	}()
+
+	// Transforming the request message to the body concurrently
+	resBodyChan := make(chan *map[string]interface{}, 1)
+	go func() {
+		// Transform the request message to the body for webauthn - it needs to be http.Request so we need to fake it
+		resBody := util.TransformLoginMsgToBody(req.Msg)
+		resBodyChan <- &resBody
+	}()
+
+	// Initialize variables for the results
+	var sessionData *webauthn.SessionData
+	var resBody *map[string]interface{}
+	var err error
+
+	// Wait for session data
+	select {
+	case sessionData = <-sessionDataChan:
+	}
+
+	// Wait for request body transformation
+	select {
+	case resBody = <-resBodyChan:
+	case err = <-errChan:
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	credential, err := ar.authService.FinishLogin(sessionData, req.Msg.GetUserid(), *resBody)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	response := &connect.Response[authv1.FinishLoginResponse]{
+		Msg: &authv1.FinishLoginResponse{
+			Token: token,
 		},
 	}
 
