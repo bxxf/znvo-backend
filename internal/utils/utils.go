@@ -3,7 +3,11 @@ package utils
 import (
 	"os"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 func GetOriginAndRpId(config *config.Config) (rpId string, origin string) {
@@ -39,3 +43,9 @@ func GetOriginAndRpId(config *config.Config) (rpId string, origin string) {
 }
 
 // Idea: Get rid of this and fetch origin from config
+
+func HandleError(err error, msg string, logger logger.LoggerInstance) error {
+
+	logger.Error(msg, "error", err)
+	return status.Errorf(codes.Internal, "%s: %v", msg, err)
+}

@@ -19,6 +19,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/auth/util"
 	"github.com/bxxf/znvo-backend/internal/logger"
+	"github.com/bxxf/znvo-backend/internal/utils"
 )
 
 /* ------------------ AuthRouter Definition ------------------ */
@@ -57,8 +58,7 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 	// Initialize registration process thru webauthn
 	sessionData, options, err := ar.authService.InitializeRegister(userID)
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to initialize registration", *ar.logger)
 	}
 	// Encode options to JSON
 	optionsJSON, err := json.Marshal(options)
@@ -115,20 +115,17 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	select {
 	case resBody = <-resBodyChan:
 	case err = <-errChan:
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to get session data", *ar.logger)
 	}
 
 	credential, err := ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to finish registration", *ar.logger)
 	}
 
 	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to create access token", *ar.logger)
 	}
 
 	response := &connect.Response[authv1.FinishRegisterResponse]{
@@ -145,7 +142,6 @@ func (ar *AuthRouter) GetUser(ctx context.Context, req *connect.Request[authv1.G
 	user, err := ar.tokenRepository.ParseAccessToken(req.Msg.GetToken())
 
 	if err != nil {
-		ar.logger.Error(err.Error())
 		return nil, status.New(codes.Unauthenticated, err.Error()).Err()
 	}
 
@@ -165,14 +161,12 @@ func (ar *AuthRouter) InitializeLogin(ctx context.Context, req *connect.Request[
 	// Initialize login process thru webauthn
 	sessionData, options, err := ar.authService.InitializeLogin(userID)
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to initialize login", *ar.logger)
 	}
 	// Encode options to JSON
 	optionsJSON, err := json.Marshal(options)
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to marshal options", *ar.logger)
 	}
 
 	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
@@ -223,20 +217,17 @@ func (ar *AuthRouter) FinishLogin(ctx context.Context, req *connect.Request[auth
 	select {
 	case resBody = <-resBodyChan:
 	case err = <-errChan:
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to get session data", *ar.logger)
 	}
 
 	credential, err := ar.authService.FinishLogin(sessionData, req.Msg.GetUserid(), *resBody)
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to finish login", *ar.logger)
 	}
 
 	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
 	if err != nil {
-		ar.logger.Error(err.Error())
-		return nil, err
+		return nil, utils.HandleError(err, "failed to create access token", *ar.logger)
 	}
 
 	response := &connect.Response[authv1.FinishLoginResponse]{
