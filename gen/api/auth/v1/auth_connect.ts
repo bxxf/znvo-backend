@@ -5,7 +5,7 @@
 
 // # Auth service (v1)
 
-import { RegisterUserRequest, RegisterUserResponse } from "./auth_pb.js";
+import { InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -15,12 +15,12 @@ export const AuthService = {
   typeName: "auth.v1.AuthService",
   methods: {
     /**
-     * @generated from rpc auth.v1.AuthService.RegisterUser
+     * @generated from rpc auth.v1.AuthService.InitializeRegister
      */
-    registerUser: {
-      name: "RegisterUser",
-      I: RegisterUserRequest,
-      O: RegisterUserResponse,
+    initializeRegister: {
+      name: "InitializeRegister",
+      I: InitializeRegisterRequest,
+      O: InitializeRegisterResponse,
       kind: MethodKind.Unary,
     },
   }
