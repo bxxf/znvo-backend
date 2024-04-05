@@ -4,11 +4,14 @@ import (
 	"net/http"
 
 	"connectrpc.com/grpcreflect"
+
 	"github.com/bxxf/znvo-backend/gen/api/auth/v1/authconnect"
 )
 
 func (s *Server) defineRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
+
+	// cors
 
 	mux.Handle(authconnect.NewAuthServiceHandler(s.authRouter))
 

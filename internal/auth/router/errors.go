@@ -7,3 +7,7 @@ import (
 )
 
 var MissingEmailOrPassword = status.New(codes.InvalidArgument, "missing email or password").Err()
+
+var MissingSession = status.New(codes.InvalidArgument, "missing session").Err()
+
+var MissingUser = status.New(codes.InvalidArgument, "missing user").Err()

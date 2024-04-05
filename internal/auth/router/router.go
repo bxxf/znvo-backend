@@ -4,14 +4,16 @@ package router
 
 import (
 	"context"
+	"encoding/base64"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
+	jsoniter "github.com/json-iterator/go"
+
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
 	sessionUtils "github.com/bxxf/znvo-backend/internal/auth/session/utils"
 	"github.com/bxxf/znvo-backend/internal/logger"
-	"github.com/google/uuid"
-	jsoniter "github.com/json-iterator/go"
 )
 
 /* ------------------ AuthRouter Definition ------------------ */
@@ -46,7 +48,6 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 		ar.logger.Error(err.Error())
 		return nil, err
 	}
-
 	// Encode options to JSON
 	optionsJSON, err := json.Marshal(options)
 	if err != nil {
@@ -63,5 +64,43 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 			Options: string(optionsJSON),
 		},
 	}
+	return response, nil
+}
+
+func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[authv1.FinishRegisterRequest]) (*connect.Response[authv1.FinishRegisterResponse], error) {
+
+	// Get session data from session ID
+	sessionData, ok := sessionUtils.GetSession(req.Msg.GetSid())
+	if !ok {
+		ar.logger.Error("Session not found")
+		return nil, MissingSession
+	}
+
+	// fake response body - we do not have http.Request in grpc connect request - it is a parameter in webauthn library
+	resBody := make(map[string]interface{})
+
+	resBody["type"] = "public-key"
+	resBody["id"] = req.Msg.GetCredid()
+	resBody["rawId"] = req.Msg.GetCredid()
+
+	resBody["response"] = map[string]interface{}{
+		"clientDataJSON":    req.Msg.GetClientdata(),
+		"attestationObject": req.Msg.GetAttestation(),
+	}
+
+	// Finish registration process thru webauthn
+	credential, err := ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), resBody)
+
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
+
+	response := &connect.Response[authv1.FinishRegisterResponse]{
+		Msg: &authv1.FinishRegisterResponse{
+			Token: base64.StdEncoding.EncodeToString(credential.PublicKey),
+		},
+	}
+
 	return response, nil
 }

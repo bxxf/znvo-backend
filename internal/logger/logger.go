@@ -5,6 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 )
 
@@ -37,7 +40,6 @@ type loggerImpl struct {
 
 // NewLogger returns a new instance of Logger with the specified log level
 func NewLogger() *LoggerInstance {
-
 	logLevel := getLogLevelForEnvironment()
 	return &LoggerInstance{
 		loggerImpl: loggerImpl{
@@ -54,16 +56,38 @@ const (
 	colorBlue   = "\033[34m"
 )
 
-// log function with color support
+var builderPool = &sync.Pool{
+	New: func() interface{} {
+		return &strings.Builder{}
+	},
+}
+
+// log function with color support and string builder for performance
 func (l *loggerImpl) log(messageLevel LogLevel, levelLabel string, args ...interface{}) {
 	if l.logLevel <= messageLevel {
+		builder := builderPool.Get().(*strings.Builder)
+		builder.Reset()
+
 		_, file, line, _ := runtime.Caller(2)
 		shortFile := filepath.Base(file)
 
 		color := getColorForLevel(messageLevel)
-		str := fmt.Sprintf("%s%s [%s] %s:%d %v%s\n", color, time.Now().Format(time.RFC3339), levelLabel, shortFile, line, args, colorReset)
 
-		fmt.Print(str)
+		builder.WriteString(color)
+		builder.WriteString(time.Now().Format(time.RFC3339))
+		builder.WriteString(" [")
+		builder.WriteString(levelLabel)
+		builder.WriteString("] ")
+		builder.WriteString(shortFile)
+		builder.WriteString(":")
+		builder.WriteString(strconv.Itoa(line))
+		builder.WriteString(" ")
+		builder.WriteString(fmt.Sprint(args...))
+		builder.WriteString(colorReset)
+		builder.WriteString("\n")
+
+		fmt.Print(builder.String())
+		builderPool.Put(builder)
 	}
 }
 
@@ -83,7 +107,7 @@ func getColorForLevel(level LogLevel) string {
 	}
 }
 
-// GetLogLevelForEnvironment returns LogLevel based on the environment setting
+// getLogLevelForEnvironment returns LogLevel based on the environment setting
 func getLogLevelForEnvironment() LogLevel {
 	switch os.Getenv("ENV") {
 	case "production":

@@ -3,8 +3,9 @@ module github.com/bxxf/znvo-backend
 go 1.21.4
 
 require (
-	connectrpc.com/connect v1.12.0
+	connectrpc.com/connect v1.13.0
 	connectrpc.com/grpcreflect v1.2.0
+	github.com/rs/cors v1.10.1
 )
 
 require (
