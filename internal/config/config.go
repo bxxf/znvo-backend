@@ -6,12 +6,13 @@ import (
 )
 
 // ENV_VALUES - list of environment variables that must be defined
-var ENV_VALUES = []string{"PORT", "FRONTEND_PORT"}
+var ENV_VALUES = []string{"PORT", "FRONTEND_PORT", "JWT_SECRET"}
 
 type Config struct {
 	FrontendPort string
 	Port         string
 	Env          string
+	JWTSecret    string
 }
 
 func NewConfig(logger *logger.LoggerInstance) *Config {
@@ -26,5 +27,6 @@ func NewConfig(logger *logger.LoggerInstance) *Config {
 		Port:         values["PORT"],
 		FrontendPort: values["FRONTEND_PORT"],
 		Env:          values["ENV"],
+		JWTSecret:    values["JWT_SECRET"],
 	}
 }

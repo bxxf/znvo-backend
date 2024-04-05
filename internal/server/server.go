@@ -40,7 +40,12 @@ func NewServer(authRouter *router.AuthRouter, logger *logger.LoggerInstance, con
 func (s *Server) StartServer() {
 	mux := s.defineRoutes()
 	// cors
-	handler := cors.AllowAll().Handler(mux)
+	handler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+	}).Handler(mux)
+
 	go func() {
 		s.logger.Info(fmt.Sprintf("Starting server on port %s", s.config.Port))
 		// Todo: Dynamically set port

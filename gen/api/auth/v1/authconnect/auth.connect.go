@@ -41,6 +41,8 @@ const (
 	// AuthServiceFinishRegisterProcedure is the fully-qualified name of the AuthService's
 	// FinishRegister RPC.
 	AuthServiceFinishRegisterProcedure = "/auth.v1.AuthService/FinishRegister"
+	// AuthServiceGetUserProcedure is the fully-qualified name of the AuthService's GetUser RPC.
+	AuthServiceGetUserProcedure = "/auth.v1.AuthService/GetUser"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -48,12 +50,14 @@ var (
 	authServiceServiceDescriptor                  = v1.File_api_auth_v1_auth_proto.Services().ByName("AuthService")
 	authServiceInitializeRegisterMethodDescriptor = authServiceServiceDescriptor.Methods().ByName("InitializeRegister")
 	authServiceFinishRegisterMethodDescriptor     = authServiceServiceDescriptor.Methods().ByName("FinishRegister")
+	authServiceGetUserMethodDescriptor            = authServiceServiceDescriptor.Methods().ByName("GetUser")
 )
 
 // AuthServiceClient is a client for the auth.v1.AuthService service.
 type AuthServiceClient interface {
 	InitializeRegister(context.Context, *connect.Request[v1.InitializeRegisterRequest]) (*connect.Response[v1.InitializeRegisterResponse], error)
 	FinishRegister(context.Context, *connect.Request[v1.FinishRegisterRequest]) (*connect.Response[v1.FinishRegisterResponse], error)
+	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the auth.v1.AuthService service. By default, it uses
@@ -78,6 +82,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceFinishRegisterMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getUser: connect.NewClient[v1.GetUserRequest, v1.GetUserResponse](
+			httpClient,
+			baseURL+AuthServiceGetUserProcedure,
+			connect.WithSchema(authServiceGetUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -85,6 +95,7 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type authServiceClient struct {
 	initializeRegister *connect.Client[v1.InitializeRegisterRequest, v1.InitializeRegisterResponse]
 	finishRegister     *connect.Client[v1.FinishRegisterRequest, v1.FinishRegisterResponse]
+	getUser            *connect.Client[v1.GetUserRequest, v1.GetUserResponse]
 }
 
 // InitializeRegister calls auth.v1.AuthService.InitializeRegister.
@@ -97,10 +108,16 @@ func (c *authServiceClient) FinishRegister(ctx context.Context, req *connect.Req
 	return c.finishRegister.CallUnary(ctx, req)
 }
 
+// GetUser calls auth.v1.AuthService.GetUser.
+func (c *authServiceClient) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
+	return c.getUser.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the auth.v1.AuthService service.
 type AuthServiceHandler interface {
 	InitializeRegister(context.Context, *connect.Request[v1.InitializeRegisterRequest]) (*connect.Response[v1.InitializeRegisterResponse], error)
 	FinishRegister(context.Context, *connect.Request[v1.FinishRegisterRequest]) (*connect.Response[v1.FinishRegisterResponse], error)
+	GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -121,12 +138,20 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceFinishRegisterMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceGetUserHandler := connect.NewUnaryHandler(
+		AuthServiceGetUserProcedure,
+		svc.GetUser,
+		connect.WithSchema(authServiceGetUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/auth.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceInitializeRegisterProcedure:
 			authServiceInitializeRegisterHandler.ServeHTTP(w, r)
 		case AuthServiceFinishRegisterProcedure:
 			authServiceFinishRegisterHandler.ServeHTTP(w, r)
+		case AuthServiceGetUserProcedure:
+			authServiceGetUserHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -142,4 +167,8 @@ func (UnimplementedAuthServiceHandler) InitializeRegister(context.Context, *conn
 
 func (UnimplementedAuthServiceHandler) FinishRegister(context.Context, *connect.Request[v1.FinishRegisterRequest]) (*connect.Response[v1.FinishRegisterResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.FinishRegister is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetUser(context.Context, *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetUser is not implemented"))
 }

@@ -7,25 +7,31 @@ import (
 	"encoding/base64"
 
 	"connectrpc.com/connect"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
-	sessionUtils "github.com/bxxf/znvo-backend/internal/auth/session/utils"
+	"github.com/bxxf/znvo-backend/internal/auth/token"
+	"github.com/bxxf/znvo-backend/internal/auth/util"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 /* ------------------ AuthRouter Definition ------------------ */
 type AuthRouter struct {
-	logger      *logger.LoggerInstance
-	authService *service.AuthService
+	logger          *logger.LoggerInstance
+	authService     *service.AuthService
+	tokenRepository *token.TokenRepository
 }
 
-func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService) *AuthRouter {
+func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository) *AuthRouter {
 	return &AuthRouter{
-		logger:      logger,
-		authService: authService,
+		logger:          logger,
+		authService:     authService,
+		tokenRepository: tokenRepository,
 	}
 }
 
@@ -39,11 +45,11 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Request[authv1.InitializeRegisterRequest]) (*connect.Response[authv1.InitializeRegisterResponse], error) {
 
 	// Generate random user ID
-	userId := uuid.New().String()
-	ar.logger.Debug("Initializing registration for user " + userId)
+	userID := uuid.New().String()
+	ar.logger.Debug("Initializing registration for user " + userID)
 
 	// Initialize registration process thru webauthn
-	sessionData, options, err := ar.authService.InitializeRegister(userId)
+	sessionData, options, err := ar.authService.InitializeRegister(userID)
 	if err != nil {
 		ar.logger.Error(err.Error())
 		return nil, err
@@ -56,7 +62,7 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 	}
 
 	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
-	sessionID := sessionUtils.NewSession(sessionData)
+	sessionID := util.NewSession(sessionData)
 
 	response := &connect.Response[authv1.InitializeRegisterResponse]{
 		Msg: &authv1.InitializeRegisterResponse{
@@ -66,31 +72,53 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 	}
 	return response, nil
 }
-
 func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[authv1.FinishRegisterRequest]) (*connect.Response[authv1.FinishRegisterResponse], error) {
+	// Usingchannels to get session data concurrently
+	sessionDataChan := make(chan *webauthn.SessionData, 1)
+	errChan := make(chan error, 1)
 
-	// Get session data from session ID
-	sessionData, ok := sessionUtils.GetSession(req.Msg.GetSid())
-	if !ok {
-		ar.logger.Error("Session not found")
-		return nil, MissingSession
+	go func() {
+		sessionData, ok := util.GetSession(req.Msg.GetSid())
+		if !ok {
+			errChan <- MissingSession
+			return
+		}
+		sessionDataChan <- sessionData
+	}()
+
+	// Transforming the request message to the body concurrently
+	resBodyChan := make(chan *map[string]interface{}, 1)
+	go func() {
+		// Transform the request message to the body for webauthn - it needs to be http.Request so we need to fake it
+		resBody := util.TransformRegisterMsgToBody(req.Msg)
+		resBodyChan <- &resBody
+	}()
+
+	// Initialize variables for the results
+	var sessionData *webauthn.SessionData
+	var resBody *map[string]interface{}
+	var err error
+
+	// Wait for session data
+	select {
+	case sessionData = <-sessionDataChan:
 	}
 
-	// fake response body - we do not have http.Request in grpc connect request - it is a parameter in webauthn library
-	resBody := make(map[string]interface{})
-
-	resBody["type"] = "public-key"
-	resBody["id"] = req.Msg.GetCredid()
-	resBody["rawId"] = req.Msg.GetCredid()
-
-	resBody["response"] = map[string]interface{}{
-		"clientDataJSON":    req.Msg.GetClientdata(),
-		"attestationObject": req.Msg.GetAttestation(),
+	// Wait for request body transformation
+	select {
+	case resBody = <-resBodyChan:
+	case err = <-errChan:
+		ar.logger.Error(err.Error())
+		return nil, err
 	}
 
-	// Finish registration process thru webauthn
-	credential, err := ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), resBody)
+	credential, err := ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, err
+	}
 
+	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey))
 	if err != nil {
 		ar.logger.Error(err.Error())
 		return nil, err
@@ -98,7 +126,25 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 
 	response := &connect.Response[authv1.FinishRegisterResponse]{
 		Msg: &authv1.FinishRegisterResponse{
-			Token: base64.StdEncoding.EncodeToString(credential.PublicKey),
+			Token: token,
+		},
+	}
+
+	return response, nil
+}
+
+func (ar *AuthRouter) GetUser(ctx context.Context, req *connect.Request[authv1.GetUserRequest]) (*connect.Response[authv1.GetUserResponse], error) {
+	// Get user details
+	user, err := ar.tokenRepository.ParseAccessToken(req.Msg.GetToken())
+
+	if err != nil {
+		ar.logger.Error(err.Error())
+		return nil, status.New(codes.Unauthenticated, err.Error()).Err()
+	}
+
+	response := &connect.Response[authv1.GetUserResponse]{
+		Msg: &authv1.GetUserResponse{
+			Id: user.UserID,
 		},
 	}
 
