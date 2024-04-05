@@ -6,7 +6,7 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/utils"
 )
@@ -19,7 +19,7 @@ var authSelection = protocol.AuthenticatorSelection{
 	UserVerification:   protocol.VerificationPreferred,
 }
 
-func NewWebAuthnClient(logger *logger.LoggerInstance, config *config.Config) (*webauthn.WebAuthn, error) {
+func NewWebAuthnClient(logger *logger.LoggerInstance, config *envconfig.EnvConfig) (*webauthn.WebAuthn, error) {
 	// Fetch origin from utils based on if app is hosted on fly
 	rpId, origin := utils.GetOriginAndRpId(config)
 

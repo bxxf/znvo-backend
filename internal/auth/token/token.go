@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/key"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
@@ -27,11 +27,11 @@ type AccessToken struct {
 
 type TokenRepository struct {
 	keyRepository *key.Repository
-	config        *config.Config
+	config        *envconfig.EnvConfig
 	logger        *logger.LoggerInstance
 }
 
-func NewTokenRepository(keyRepository *key.Repository, config *config.Config, logger *logger.LoggerInstance) *TokenRepository {
+func NewTokenRepository(keyRepository *key.Repository, config *envconfig.EnvConfig, logger *logger.LoggerInstance) *TokenRepository {
 	return &TokenRepository{
 		keyRepository: keyRepository,
 		config:        config,

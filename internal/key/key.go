@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt"
 
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 )
 
 type Repository struct {
@@ -19,7 +19,7 @@ type Key struct {
 	Public  crypto.PublicKey
 }
 
-func NewKeyRepository(config *config.Config) *Repository {
+func NewKeyRepository(config *envconfig.EnvConfig) *Repository {
 	rsaKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.JWTSecret))
 	if err != nil {
 		log.Fatal(err)

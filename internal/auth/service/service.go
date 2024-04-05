@@ -14,7 +14,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/model"
 	"github.com/bxxf/znvo-backend/internal/auth/util"
 	authUtil "github.com/bxxf/znvo-backend/internal/auth/util"
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/utils"
 )
@@ -26,7 +26,7 @@ type AuthService struct {
 }
 
 // NewAuthService creates a new AuthService instance with the provided logger and configuration.
-func NewAuthService(logger *logger.LoggerInstance, cfg *config.Config) *AuthService {
+func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig) *AuthService {
 	webAuthn, err := NewWebAuthnClient(logger, cfg)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn object", "error", err)

@@ -6,11 +6,15 @@ require (
 	connectrpc.com/connect v1.13.0
 	connectrpc.com/grpcreflect v1.2.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/cors v1.10.1
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-webauthn/x v0.1.5 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
