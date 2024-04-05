@@ -254,3 +254,187 @@ export class GetUserResponse extends Message<GetUserResponse> {
   }
 }
 
+/**
+ * @generated from message auth.v1.InitializeLoginRequest
+ */
+export class InitializeLoginRequest extends Message<InitializeLoginRequest> {
+  /**
+   * @generated from field: string userid = 1;
+   */
+  userid = "";
+
+  constructor(data?: PartialMessage<InitializeLoginRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.InitializeLoginRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "userid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InitializeLoginRequest {
+    return new InitializeLoginRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InitializeLoginRequest {
+    return new InitializeLoginRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InitializeLoginRequest {
+    return new InitializeLoginRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InitializeLoginRequest | PlainMessage<InitializeLoginRequest> | undefined, b: InitializeLoginRequest | PlainMessage<InitializeLoginRequest> | undefined): boolean {
+    return proto3.util.equals(InitializeLoginRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message auth.v1.InitializeLoginResponse
+ */
+export class InitializeLoginResponse extends Message<InitializeLoginResponse> {
+  /**
+   * @generated from field: string sid = 1;
+   */
+  sid = "";
+
+  /**
+   * @generated from field: string options = 2;
+   */
+  options = "";
+
+  constructor(data?: PartialMessage<InitializeLoginResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.InitializeLoginResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "options", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InitializeLoginResponse {
+    return new InitializeLoginResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InitializeLoginResponse {
+    return new InitializeLoginResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InitializeLoginResponse {
+    return new InitializeLoginResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InitializeLoginResponse | PlainMessage<InitializeLoginResponse> | undefined, b: InitializeLoginResponse | PlainMessage<InitializeLoginResponse> | undefined): boolean {
+    return proto3.util.equals(InitializeLoginResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message auth.v1.FinishLoginRequest
+ */
+export class FinishLoginRequest extends Message<FinishLoginRequest> {
+  /**
+   * @generated from field: string userid = 1;
+   */
+  userid = "";
+
+  /**
+   * @generated from field: string sid = 2;
+   */
+  sid = "";
+
+  /**
+   * @generated from field: string credid = 3;
+   */
+  credid = "";
+
+  /**
+   * @generated from field: string authdata = 4;
+   */
+  authdata = "";
+
+  /**
+   * @generated from field: string clientdata = 5;
+   */
+  clientdata = "";
+
+  /**
+   * @generated from field: string signature = 6;
+   */
+  signature = "";
+
+  constructor(data?: PartialMessage<FinishLoginRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.FinishLoginRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "userid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "credid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "authdata", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "clientdata", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishLoginRequest {
+    return new FinishLoginRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinishLoginRequest {
+    return new FinishLoginRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinishLoginRequest {
+    return new FinishLoginRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinishLoginRequest | PlainMessage<FinishLoginRequest> | undefined, b: FinishLoginRequest | PlainMessage<FinishLoginRequest> | undefined): boolean {
+    return proto3.util.equals(FinishLoginRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message auth.v1.FinishLoginResponse
+ */
+export class FinishLoginResponse extends Message<FinishLoginResponse> {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token = "";
+
+  constructor(data?: PartialMessage<FinishLoginResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.FinishLoginResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishLoginResponse {
+    return new FinishLoginResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinishLoginResponse {
+    return new FinishLoginResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinishLoginResponse {
+    return new FinishLoginResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinishLoginResponse | PlainMessage<FinishLoginResponse> | undefined, b: FinishLoginResponse | PlainMessage<FinishLoginResponse> | undefined): boolean {
+    return proto3.util.equals(FinishLoginResponse, a, b);
+  }
+}
+
