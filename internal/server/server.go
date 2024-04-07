@@ -11,17 +11,17 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/bxxf/znvo-backend/internal/auth/router"
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 type Server struct {
 	authRouter *router.AuthRouter
 	logger     *logger.LoggerInstance
-	config     *config.Config
+	config     *envconfig.EnvConfig
 }
 
-func NewServer(authRouter *router.AuthRouter, logger *logger.LoggerInstance, config *config.Config, lc fx.Lifecycle) *Server {
+func NewServer(authRouter *router.AuthRouter, logger *logger.LoggerInstance, config *envconfig.EnvConfig, lc fx.Lifecycle) *Server {
 	server := &Server{
 		authRouter: authRouter,
 		logger:     logger,

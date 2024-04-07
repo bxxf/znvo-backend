@@ -6,11 +6,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
-func GetOriginAndRpId(config *config.Config) (rpId string, origin string) {
+func GetOriginAndRpId(config *envconfig.EnvConfig) (rpId string, origin string) {
 	// Setup current origin based on if app is hosted on fly
 	var isOnFly bool
 

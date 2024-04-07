@@ -16,6 +16,7 @@ import (
 	authv1 "github.com/bxxf/znvo-backend/gen/api/auth/v1"
 	"github.com/bxxf/znvo-backend/gen/api/auth/v1/authconnect"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
+	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/auth/util"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -25,20 +26,22 @@ import (
 /* ------------------ AuthRouter Definition ------------------ */
 
 type AuthRouter struct {
-	logger          *logger.LoggerInstance
-	authService     *service.AuthService
-	tokenRepository *token.TokenRepository
+	logger            *logger.LoggerInstance
+	authService       *service.AuthService
+	tokenRepository   *token.TokenRepository
+	sessionRepository *session.SessionRepository
 }
 
 type Definer interface {
 	authconnect.AuthServiceHandler
 }
 
-func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository) *AuthRouter {
+func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository, sessionRepository *session.SessionRepository) *AuthRouter {
 	return &AuthRouter{
-		logger:          logger,
-		authService:     authService,
-		tokenRepository: tokenRepository,
+		logger:            logger,
+		authService:       authService,
+		tokenRepository:   tokenRepository,
+		sessionRepository: sessionRepository,
 	}
 }
 
@@ -68,7 +71,10 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 	}
 
 	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
-	sessionID := util.NewSession(sessionData)
+	sessionID, err := ar.sessionRepository.NewSession(sessionData)
+	if err != nil {
+		return nil, utils.HandleError(err, "failed to create session", *ar.logger)
+	}
 
 	response := &connect.Response[authv1.InitializeRegisterResponse]{
 		Msg: &authv1.InitializeRegisterResponse{
@@ -85,9 +91,9 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	errChan := make(chan error, 1)
 
 	go func() {
-		sessionData, ok := util.GetSession(req.Msg.GetSid())
-		if !ok {
-			errChan <- MissingSession
+		sessionData, err := ar.sessionRepository.GetSession(req.Msg.GetSid())
+		if err != nil {
+			errChan <- err
 			return
 		}
 		sessionDataChan <- sessionData
@@ -156,6 +162,11 @@ func (ar *AuthRouter) GetUser(ctx context.Context, req *connect.Request[authv1.G
 
 func (ar *AuthRouter) InitializeLogin(ctx context.Context, req *connect.Request[authv1.InitializeLoginRequest]) (*connect.Response[authv1.InitializeLoginResponse], error) {
 	userID := req.Msg.GetUserid()
+
+	if userID == "" {
+		return nil, status.New(codes.InvalidArgument, "user id is required").Err()
+	}
+
 	ar.logger.Debug("Initializing login for user " + userID)
 
 	// Initialize login process thru webauthn
@@ -170,7 +181,11 @@ func (ar *AuthRouter) InitializeLogin(ctx context.Context, req *connect.Request[
 	}
 
 	// Create a new session (Placeholder - internal map -> will be merged to Redis later)
-	sessionID := util.NewSession(sessionData)
+	sessionID, err := ar.sessionRepository.NewSession(sessionData)
+
+	if err != nil {
+		return nil, utils.HandleError(err, "failed to create session", *ar.logger)
+	}
 
 	response := &connect.Response[authv1.InitializeLoginResponse]{
 		Msg: &authv1.InitializeLoginResponse{
@@ -187,9 +202,9 @@ func (ar *AuthRouter) FinishLogin(ctx context.Context, req *connect.Request[auth
 	errChan := make(chan error, 1)
 
 	go func() {
-		sessionData, ok := util.GetSession(req.Msg.GetSid())
-		if !ok {
-			errChan <- MissingSession
+		sessionData, err := ar.sessionRepository.GetSession(req.Msg.GetSid())
+		if err != nil {
+			errChan <- err
 			return
 		}
 		sessionDataChan <- sessionData

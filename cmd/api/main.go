@@ -8,10 +8,12 @@ import (
 
 	"github.com/bxxf/znvo-backend/internal/auth/router"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
+	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
-	"github.com/bxxf/znvo-backend/internal/config"
+	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/key"
 	"github.com/bxxf/znvo-backend/internal/logger"
+	"github.com/bxxf/znvo-backend/internal/redis"
 	"github.com/bxxf/znvo-backend/internal/server"
 )
 
@@ -19,8 +21,10 @@ func main() {
 	app := fx.New(
 		fx.Provide(
 			logger.NewLogger,
-			config.NewConfig,
+			envconfig.NewEnvConfig,
+			redis.NewRedisService,
 			service.NewAuthService,
+			session.NewSessionRepository,
 			router.NewAuthRouter,
 			server.NewServer,
 			key.NewKeyRepository,
@@ -29,7 +33,7 @@ func main() {
 		fx.Invoke(
 			func(s *server.Server) {
 			},
-			func(c *config.Config) {
+			func(c *envconfig.EnvConfig) {
 			}),
 	)
 
