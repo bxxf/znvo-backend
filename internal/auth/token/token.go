@@ -8,7 +8,6 @@ import (
 	"github.com/golang-jwt/jwt"
 
 	"github.com/bxxf/znvo-backend/internal/envconfig"
-	"github.com/bxxf/znvo-backend/internal/key"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
@@ -26,16 +25,14 @@ type AccessToken struct {
 }
 
 type TokenRepository struct {
-	keyRepository *key.Repository
-	config        *envconfig.EnvConfig
-	logger        *logger.LoggerInstance
+	config *envconfig.EnvConfig
+	logger *logger.LoggerInstance
 }
 
-func NewTokenRepository(keyRepository *key.Repository, config *envconfig.EnvConfig, logger *logger.LoggerInstance) *TokenRepository {
+func NewTokenRepository(config *envconfig.EnvConfig, logger *logger.LoggerInstance) *TokenRepository {
 	return &TokenRepository{
-		keyRepository: keyRepository,
-		config:        config,
-		logger:        logger,
+		config: config,
+		logger: logger,
 	}
 }
 
@@ -53,7 +50,7 @@ func (r *TokenRepository) ParseAccessToken(tokenString string) (*AccessToken, er
 	r.logger.Debug("parsing access token " + tokenString)
 	claims := &AccessTokenClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return r.keyRepository.GetPublicKey(), nil
+		return r.config.JWTSecret, nil
 	})
 
 	if err != nil {

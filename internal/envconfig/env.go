@@ -6,14 +6,13 @@ import (
 )
 
 // ENV_VALUES - list of environment variables that must be defined
-var ENV_VALUES = []string{"PORT", "FRONTEND_PORT", "JWT_SECRET", "REDIS_URL"}
+var ENV_VALUES = []string{"PORT", "JWT_SECRET", "REDIS_URL"}
 
 type EnvConfig struct {
-	FrontendPort string
-	Port         string
-	Env          string
-	JWTSecret    string
-	RedisURL     string
+	Port      string
+	Env       string
+	JWTSecret string
+	RedisURL  string
 }
 
 func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
@@ -25,10 +24,9 @@ func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
 	}
 
 	return &EnvConfig{
-		Port:         values["PORT"],
-		FrontendPort: values["FRONTEND_PORT"],
-		Env:          values["ENV"],
-		JWTSecret:    values["JWT_SECRET"],
-		RedisURL:     values["REDIS_URL"],
+		Port:      values["PORT"],
+		Env:       values["ENV"],
+		JWTSecret: values["JWT_SECRET"],
+		RedisURL:  values["REDIS_URL"],
 	}
 }

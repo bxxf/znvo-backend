@@ -24,9 +24,9 @@ func GetOriginAndRpId(config *envconfig.EnvConfig) (rpId string, origin string) 
 	var currentOrigin string
 
 	if !isOnFly {
-		currentOrigin = "http://localhost:" + config.FrontendPort
+		currentOrigin = "http://localhost:3000"
 	} else {
-		currentOrigin = "https://" + os.Getenv("FLY_APP_NAME") + ".fly.dev"
+		currentOrigin = "https://znvo.co.uk"
 	}
 
 	// Setup RPID based on if app is hosted on fly
@@ -35,7 +35,7 @@ func GetOriginAndRpId(config *envconfig.EnvConfig) (rpId string, origin string) 
 	if !isOnFly {
 		rpid = "localhost"
 	} else {
-		rpid = os.Getenv("FLY_APP_NAME") + ".fly.dev"
+		rpid = "znvo.co.uk"
 	}
 
 	return rpid, currentOrigin

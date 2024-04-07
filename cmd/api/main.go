@@ -11,7 +11,6 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
-	"github.com/bxxf/znvo-backend/internal/key"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/redis"
 	"github.com/bxxf/znvo-backend/internal/server"
@@ -27,7 +26,6 @@ func main() {
 			session.NewSessionRepository,
 			router.NewAuthRouter,
 			server.NewServer,
-			key.NewKeyRepository,
 			token.NewTokenRepository,
 		),
 		fx.Invoke(
