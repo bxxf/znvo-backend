@@ -162,6 +162,11 @@ func (ar *AuthRouter) GetUser(ctx context.Context, req *connect.Request[authv1.G
 
 func (ar *AuthRouter) InitializeLogin(ctx context.Context, req *connect.Request[authv1.InitializeLoginRequest]) (*connect.Response[authv1.InitializeLoginResponse], error) {
 	userID := req.Msg.GetUserid()
+
+	if userID == "" {
+		return nil, status.New(codes.InvalidArgument, "user id is required").Err()
+	}
+
 	ar.logger.Debug("Initializing login for user " + userID)
 
 	// Initialize login process thru webauthn
