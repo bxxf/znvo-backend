@@ -9,6 +9,6 @@ func (r *TokenRepository) generateJWT(userID string, publicKey string, expiry in
 		Exp:       expiry,
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	return token.SignedString(token)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(r.config.JWTSecret))
 }
