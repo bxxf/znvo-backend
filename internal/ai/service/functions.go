@@ -80,40 +80,9 @@ func (s *AiService) executeToolCalls(ctx context.Context, llm llms.Model, messag
 
 			s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
 				Message:     string(responseJSON),
+				SessionId:   streamID,
 				MessageType: aiv1.MessageType_ACTIVITIES,
 			})
-			msgHistory, ok := LoadMessageHistory(streamID)
-			if !ok {
-				panic("Could not load message history")
-			}
-
-			noPointer := *msgHistory
-			noPointer = append(noPointer, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, "Send another question or exit the conversation")}...)
-			//	resp, err := s.llm.GenerateContent(context.Background(), noPointer, llms.WithTools(availableTools))
-
-			if err != nil {
-				log.Fatal(err)
-			}
-			/*
-				s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
-					Message:     string(resp.Choices[0].Content),
-					MessageType: aiv1.MessageType_CHAT,
-				})
-
-				/*
-
-					activityCallRes := llms.MessageContent{
-						Role: llms.ChatMessageTypeTool,
-						Parts: []llms.ContentPart{
-							llms.ToolCallResponse{
-								ToolCallID: toolCall.ID,
-								Name:       toolCall.FunctionCall.Name,
-								Content:    string(responseJSON),
-							},
-						},
-					}
-					messageHistory = append(messageHistory, activityCallRes)
-			*/
 
 		default:
 			log.Fatalf("Unsupported tool: %s", toolCall.FunctionCall.Name)

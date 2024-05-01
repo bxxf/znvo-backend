@@ -105,21 +105,18 @@ func (s *AiService) SendMessage(sessionId string, message string) (*StartConvers
 	if resp.Choices[0].Content != "" {
 		outMsg = resp.Choices[0].Content
 	} else {
-		if resp.Choices[0].FuncCall.Name != "" {
-			/* *
-			msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, "Send another question or exit the conversation")}...)
-			resp, err := s.llm.GenerateContent(context.Background(), msgHistory, llms.WithTools(availableTools))
-			if err != nil {
-				s.logger.Error("Failed to generate content: ", err)
-				return nil, err
-			}
 
-			msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content)}...)
-
-			outMsg = resp.Choices[0].Content
-*/
-
+		msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, "Send another question or exit the conversation")}...)
+		resp, err := s.llm.GenerateContent(context.Background(), msgHistory, llms.WithTools(availableTools))
+		if err != nil {
+			s.logger.Error("Failed to generate content: ", err)
+			return nil, err
 		}
+
+		msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content)}...)
+
+		outMsg = resp.Choices[0].Content
+
 	}
 
 	SaveMessageHistory(&msgHistory, sessionId)
