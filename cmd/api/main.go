@@ -6,7 +6,9 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/bxxf/znvo-backend/internal/auth/router"
+	aiRouter "github.com/bxxf/znvo-backend/internal/ai/router"
+	aiService "github.com/bxxf/znvo-backend/internal/ai/service"
+	authRouter "github.com/bxxf/znvo-backend/internal/auth/router"
 	"github.com/bxxf/znvo-backend/internal/auth/service"
 	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
@@ -24,7 +26,10 @@ func main() {
 			redis.NewRedisService,
 			service.NewAuthService,
 			session.NewSessionRepository,
-			router.NewAuthRouter,
+			aiService.NewStreamStore,
+			authRouter.NewAuthRouter,
+			aiService.NewAiService,
+			aiRouter.NewAiRouter,
 			server.NewServer,
 			token.NewTokenRepository,
 		),

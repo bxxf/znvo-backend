@@ -10,20 +10,23 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	"github.com/bxxf/znvo-backend/internal/auth/router"
+	aiRouter "github.com/bxxf/znvo-backend/internal/ai/router"
+	authRouter "github.com/bxxf/znvo-backend/internal/auth/router"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 type Server struct {
-	authRouter *router.AuthRouter
+	authRouter *authRouter.AuthRouter
+	aiRouter   *aiRouter.AiRouter
 	logger     *logger.LoggerInstance
 	config     *envconfig.EnvConfig
 }
 
-func NewServer(authRouter *router.AuthRouter, logger *logger.LoggerInstance, config *envconfig.EnvConfig, lc fx.Lifecycle) *Server {
+func NewServer(authRouter *authRouter.AuthRouter, aiRouter *aiRouter.AiRouter, logger *logger.LoggerInstance, config *envconfig.EnvConfig, lc fx.Lifecycle) *Server {
 	server := &Server{
 		authRouter: authRouter,
+		aiRouter:   aiRouter,
 		logger:     logger,
 		config:     config,
 	}

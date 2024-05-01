@@ -4,7 +4,6 @@ package router
 
 import (
 	"context"
-	"encoding/base64"
 
 	"connectrpc.com/connect"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -129,7 +128,9 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 		return nil, utils.HandleError(err, "failed to finish registration", *ar.logger)
 	}
 
-	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
+	ar.logger.Debug("Registration completed for user " + string(credential.PublicKey))
+
+	token, err := ar.tokenRepository.CreateAccessToken(req.Msg.GetUserid())
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to create access token", *ar.logger)
 	}
@@ -240,7 +241,9 @@ func (ar *AuthRouter) FinishLogin(ctx context.Context, req *connect.Request[auth
 		return nil, utils.HandleError(err, "failed to finish login", *ar.logger)
 	}
 
-	token, err := ar.tokenRepository.CreateAccessToken(base64.StdEncoding.EncodeToString(credential.PublicKey), req.Msg.GetUserid())
+	ar.logger.Debug("Login completed for user " + string(credential.PublicKey))
+
+	token, err := ar.tokenRepository.CreateAccessToken(req.Msg.GetUserid())
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to create access token", *ar.logger)
 	}

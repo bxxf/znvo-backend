@@ -2,11 +2,10 @@ package token
 
 import "github.com/golang-jwt/jwt"
 
-func (r *TokenRepository) generateJWT(userID string, publicKey string, expiry int64) (string, error) {
+func (r *TokenRepository) generateJWT(userID string, expiry int64) (string, error) {
 	claims := AccessTokenClaims{
-		UserID:    userID,
-		PublicKey: publicKey,
-		Exp:       expiry,
+		UserID: userID,
+		Exp:    expiry,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

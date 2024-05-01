@@ -5,21 +5,22 @@ import (
 
 	"connectrpc.com/grpcreflect"
 
+	"github.com/bxxf/znvo-backend/gen/api/ai/v1/aiconnect"
 	"github.com/bxxf/znvo-backend/gen/api/auth/v1/authconnect"
 )
 
 func (s *Server) defineRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// cors
-
 	mux.Handle(authconnect.NewAuthServiceHandler(s.authRouter))
+	mux.Handle(aiconnect.NewAiServiceHandler(s.aiRouter))
 
 	// Add reflection for development
 	if s.config.Env == "development" {
 
 		reflector := grpcreflect.NewStaticReflector(
 			"auth.v1.AuthService",
+			"ai.v1.AiService",
 		)
 
 		mux.Handle(grpcreflect.NewHandlerV1(reflector))

@@ -1,0 +1,41 @@
+syntax = "proto3";
+import "google/protobuf/struct.proto";
+
+// # Ai Service
+
+package ai.v1;
+
+option go_package = "github.com/bxxf/znvo-backend/gen/api/ai/v1;ai";
+
+enum MessageType {
+    CHAT = 0;
+    ACTIVITIES = 1;
+    NUTRITION = 2;
+    MOOD = 3;
+    CORRELATION = 4;
+}
+
+service AiService {
+    rpc StartSession (StartSessionRequest) returns (stream StartSessionResponse);
+    rpc SendMsg (SendMsgRequest) returns (SendMsgResponse);
+}
+
+message StartSessionRequest {
+   string user_token = 1;
+}
+
+message StartSessionResponse {
+   string message = 1;
+   string session_id = 2;
+   MessageType message_type = 3;
+}
+
+message SendMsgRequest {
+   string user_token = 1;
+   string message = 2;
+   string session_id = 3;
+}
+
+message SendMsgResponse {
+   string message = 1;
+}

@@ -12,9 +12,8 @@ import (
 )
 
 type AccessTokenClaims struct {
-	UserID    string `json:"userId"`
-	Exp       int64  `json:"exp"`
-	PublicKey string `json:"publicKey"`
+	UserID string `json:"userId"`
+	Exp    int64  `json:"exp"`
 
 	jwt.StandardClaims
 }
@@ -36,9 +35,9 @@ func NewTokenRepository(config *envconfig.EnvConfig, logger *logger.LoggerInstan
 	}
 }
 
-func (r *TokenRepository) CreateAccessToken(publicKey string, userID string) (string, error) {
+func (r *TokenRepository) CreateAccessToken(userID string) (string, error) {
 	expiry := time.Now().Add(time.Minute * 15)
-	token, err := r.generateJWT(userID, publicKey, expiry.Unix())
+	token, err := r.generateJWT(userID, expiry.Unix())
 	if err != nil {
 		log.Printf("could not generate token: %v", err)
 		return "", fmt.Errorf("could not generate token: %w", err)
@@ -50,7 +49,7 @@ func (r *TokenRepository) ParseAccessToken(tokenString string) (*AccessToken, er
 	r.logger.Debug("parsing access token " + tokenString)
 	claims := &AccessTokenClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return r.config.JWTSecret, nil
+		return []byte(r.config.JWTSecret), nil
 	})
 
 	if err != nil {
