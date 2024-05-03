@@ -6,13 +6,14 @@ import (
 )
 
 // ENV_VALUES - list of environment variables that must be defined
-var ENV_VALUES = []string{"PORT", "JWT_SECRET", "REDIS_URL"}
+var ENV_VALUES = []string{"PORT", "JWT_SECRET", "REDIS_URL", "GCP_CREDENTIALS"}
 
 type EnvConfig struct {
-	Port      string
-	Env       string
-	JWTSecret string
-	RedisURL  string
+	Port           string
+	Env            string
+	JWTSecret      string
+	RedisURL       string
+	GCPCredentials string
 }
 
 func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
@@ -24,9 +25,10 @@ func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
 	}
 
 	return &EnvConfig{
-		Port:      values["PORT"],
-		Env:       values["ENV"],
-		JWTSecret: values["JWT_SECRET"],
-		RedisURL:  values["REDIS_URL"],
+		Port:           values["PORT"],
+		Env:            values["ENV"],
+		JWTSecret:      values["JWT_SECRET"],
+		RedisURL:       values["REDIS_URL"],
+		GCPCredentials: values["GCP_CREDENTIALS"],
 	}
 }

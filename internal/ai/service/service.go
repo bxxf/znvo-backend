@@ -165,7 +165,6 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 
 	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
 	s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
-	s.logger.Debug("Message history: ", msgHistory)
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
