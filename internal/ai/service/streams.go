@@ -1,9 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"sync"
 
 	"connectrpc.com/connect"
+
 	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
 )
 
@@ -52,6 +54,7 @@ func (s *StreamStore) SendMessage(sessionID string, msg *aiv1.StartSessionRespon
 }
 
 func (s *StreamStore) CloseSession(sessionID string) {
+	fmt.Printf("Closing session %s\n", sessionID)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	close(s.msgChan[sessionID])

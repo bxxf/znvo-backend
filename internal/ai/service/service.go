@@ -2,13 +2,14 @@ package service
 
 import (
 	"context"
-	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
-	"github.com/bxxf/znvo-backend/internal/ai/util"
+	"github.com/bxxf/znvo-backend/internal/ai/chat"
+	"github.com/bxxf/znvo-backend/internal/ai/prompt"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
@@ -16,6 +17,7 @@ type AiService struct {
 	logger      *logger.LoggerInstance
 	llm         *openai.LLM
 	streamStore *StreamStore
+	chatService *chat.ChatService
 }
 
 type StartConversationResponse struct {
@@ -23,12 +25,13 @@ type StartConversationResponse struct {
 	SessionID string
 }
 
-func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore) *AiService {
+func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore, chatService *chat.ChatService) *AiService {
 	llm := InitializeModel()
 	return &AiService{
 		logger:      logger,
 		streamStore: streamStore,
 		llm:         llm,
+		chatService: chatService,
 	}
 }
 
@@ -47,10 +50,10 @@ func InitializeModel() *openai.LLM {
  */
 func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 
-	ctx := context.Background()
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	// define initial message history with prompt
 	messageHistory := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, util.Prompt),
+		llms.TextParts(llms.ChatMessageTypeSystem, prompt.Prompt),
 	}
 	// generate first message based on the prompt
 	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
@@ -82,7 +85,11 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 	}
 
 	// save the message history to the stream store
-	SaveMessageHistory(&messageHistory, sessionId)
+	_, err = s.chatService.SaveMessageHistory(&messageHistory, sessionId)
+	if err != nil {
+		s.logger.Error("Failed to save message history: ", err)
+		return nil, err
+	}
 
 	return &StartConversationResponse{
 		Message:   resp.Choices[0].Content,
@@ -101,10 +108,11 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 func (s *AiService) SendMessage(sessionId string, message string, mtype string) (*StartConversationResponse, error) {
 	var outputMessage string
 	var msg llms.MessageContent
-	messageHistory, ok := LoadMessageHistory(sessionId)
-	if !ok {
-		s.logger.Error("Failed to load message history")
-		return nil, errors.New("Failed to load message history")
+	messageHistory, error := s.chatService.LoadMessageHistory(sessionId)
+
+	if error != nil {
+		s.logger.Error("Failed to load message history: ", error)
+		return nil, error
 	}
 
 	msgHistory := *messageHistory
@@ -142,7 +150,7 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 	// if the response contains function calls, run the model again with prompt to go to another step to prevent stopping the conversation
 	if resp.Choices[0].FuncCall == nil {
 		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
-		SaveMessageHistory(&msgHistory, sessionId)
+		s.chatService.SaveMessageHistory(&msgHistory, sessionId)
 		outputMessage = resp.Choices[0].Content
 
 		// if the function call is not endSession then recursively call message sending
@@ -163,4 +171,9 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 		Message:   outputMessage,
 		SessionID: sessionId,
 	}, nil
+}
+
+func (s *AiService) CloseSession(sessionId string) {
+	s.streamStore.CloseSession(sessionId)
+	s.chatService.DeleteChatHistory(sessionId)
 }

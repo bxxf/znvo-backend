@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/fx"
 
+	"github.com/bxxf/znvo-backend/internal/ai/chat"
 	aiRouter "github.com/bxxf/znvo-backend/internal/ai/router"
 	aiService "github.com/bxxf/znvo-backend/internal/ai/service"
 	authRouter "github.com/bxxf/znvo-backend/internal/auth/router"
@@ -30,6 +31,7 @@ func main() {
 			authRouter.NewAuthRouter,
 			aiService.NewAiService,
 			aiRouter.NewAiRouter,
+			chat.NewChatService,
 			server.NewServer,
 			token.NewTokenRepository,
 		),

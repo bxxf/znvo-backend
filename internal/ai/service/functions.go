@@ -117,9 +117,10 @@ func (s *AiService) executeToolCalls(ctx context.Context, messageHistory []llms.
 				s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
 					Message:     args.Message,
 					SessionId:   streamID,
-					MessageType: aiv1.MessageType_CHAT,
+					MessageType: aiv1.MessageType_ENDSESSION,
 				})
-				s.streamStore.CloseSession(streamID)
+
+				s.chatService.DeleteChatHistory(streamID)
 			default:
 				logger.Info("Unknown tool call: ", toolCall.FunctionCall.Name)
 			}
