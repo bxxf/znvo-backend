@@ -3,12 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-// # Auth service (v1)
+//
+//# Auth Service (v1)
+//This service is responsible for handling user authentication and registration.
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 
 /**
+ * Request to initialize a registration
+ *
  * @generated from message auth.v1.InitializeRegisterRequest
  */
 export class InitializeRegisterRequest extends Message<InitializeRegisterRequest> {
@@ -40,6 +44,8 @@ export class InitializeRegisterRequest extends Message<InitializeRegisterRequest
 }
 
 /**
+ * Response to initialize a registration - contains the session ID and publickey options
+ *
  * @generated from message auth.v1.InitializeRegisterResponse
  */
 export class InitializeRegisterResponse extends Message<InitializeRegisterResponse> {
@@ -83,6 +89,8 @@ export class InitializeRegisterResponse extends Message<InitializeRegisterRespon
 }
 
 /**
+ * Request to finish a registration - contains the session ID, user ID, credential ID, client data, and attestation
+ *
  * @generated from message auth.v1.FinishRegisterRequest
  */
 export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
@@ -144,6 +152,8 @@ export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
 }
 
 /**
+ * Response to finish a registration - contains the JWT token
+ *
  * @generated from message auth.v1.FinishRegisterResponse
  */
 export class FinishRegisterResponse extends Message<FinishRegisterResponse> {
@@ -181,6 +191,8 @@ export class FinishRegisterResponse extends Message<FinishRegisterResponse> {
 }
 
 /**
+ * Request to get a user
+ *
  * @generated from message auth.v1.GetUserRequest
  */
 export class GetUserRequest extends Message<GetUserRequest> {
@@ -218,6 +230,8 @@ export class GetUserRequest extends Message<GetUserRequest> {
 }
 
 /**
+ * Response to get a user - contains the user ID
+ *
  * @generated from message auth.v1.GetUserResponse
  */
 export class GetUserResponse extends Message<GetUserResponse> {
@@ -255,6 +269,8 @@ export class GetUserResponse extends Message<GetUserResponse> {
 }
 
 /**
+ * Request to initialize a login
+ *
  * @generated from message auth.v1.InitializeLoginRequest
  */
 export class InitializeLoginRequest extends Message<InitializeLoginRequest> {
@@ -292,6 +308,8 @@ export class InitializeLoginRequest extends Message<InitializeLoginRequest> {
 }
 
 /**
+ * Response to initialize a login - contains the session ID and publickey options
+ *
  * @generated from message auth.v1.InitializeLoginResponse
  */
 export class InitializeLoginResponse extends Message<InitializeLoginResponse> {
@@ -335,6 +353,8 @@ export class InitializeLoginResponse extends Message<InitializeLoginResponse> {
 }
 
 /**
+ * Request to finish a login - contains the user ID, session ID, credential ID, auth data, client data, and signature
+ *
  * @generated from message auth.v1.FinishLoginRequest
  */
 export class FinishLoginRequest extends Message<FinishLoginRequest> {
@@ -402,6 +422,8 @@ export class FinishLoginRequest extends Message<FinishLoginRequest> {
 }
 
 /**
+ * Response to finish a login - contains the JWT token
+ *
  * @generated from message auth.v1.FinishLoginResponse
  */
 export class FinishLoginResponse extends Message<FinishLoginResponse> {

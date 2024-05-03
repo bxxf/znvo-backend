@@ -2,8 +2,9 @@
 //
 // Source: api/ai/v1/ai.proto
 
-// # Ai Service
-
+// # AI Service (v1)
+// This service is responsible for handling the requests calling the LLM model.
+// The service is responsible for starting a chat session and streaming back responses.
 package aiconnect
 
 import (
@@ -50,7 +51,9 @@ var (
 
 // AiServiceClient is a client for the ai.v1.AiService service.
 type AiServiceClient interface {
+	// Start a chat session - this will return a session ID and start streaming responses
 	StartSession(context.Context, *connect.Request[v1.StartSessionRequest]) (*connect.ServerStreamForClient[v1.StartSessionResponse], error)
+	// Send a message to the chat session
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
 }
 
@@ -97,7 +100,9 @@ func (c *aiServiceClient) SendMsg(ctx context.Context, req *connect.Request[v1.S
 
 // AiServiceHandler is an implementation of the ai.v1.AiService service.
 type AiServiceHandler interface {
+	// Start a chat session - this will return a session ID and start streaming responses
 	StartSession(context.Context, *connect.Request[v1.StartSessionRequest], *connect.ServerStream[v1.StartSessionResponse]) error
+	// Send a message to the chat session
 	SendMsg(context.Context, *connect.Request[v1.SendMsgRequest]) (*connect.Response[v1.SendMsgResponse], error)
 }
 

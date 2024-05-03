@@ -3,12 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-// # Auth service (v1)
+//
+//# Auth Service (v1)
+//This service is responsible for handling user authentication and registration.
 
 import { FinishLoginRequest, FinishLoginResponse, FinishRegisterRequest, FinishRegisterResponse, GetUserRequest, GetUserResponse, InitializeLoginRequest, InitializeLoginResponse, InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
+ * Auth Service
+ *
  * @generated from service auth.v1.AuthService
  */
 export const AuthService = {

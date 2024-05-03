@@ -8,6 +8,7 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
+	"github.com/bxxf/znvo-backend/internal/ai/util"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
@@ -39,12 +40,17 @@ func InitializeModel() *openai.LLM {
 	return llm
 }
 
+/**
+ * StartConversation - starts a conversation with the AI model and returns the stream
+ * @return StartConversationResponse - the response containing the message and session id
+ * @return error - error if the conversation fails to start
+ */
 func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 
 	ctx := context.Background()
 	// define initial message history with prompt
 	messageHistory := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, prompt),
+		llms.TextParts(llms.ChatMessageTypeSystem, util.Prompt),
 	}
 	// generate first message based on the prompt
 	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
@@ -61,6 +67,8 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 
 	// append the response to the message history
 	messageHistory = append(messageHistory, newContent...)
+
+	// generate a new session id
 	sessionId := uuid.New().String()
 
 	// if the stream already exists, generate a new uid
@@ -82,6 +90,14 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 	}, nil
 }
 
+/**
+ * SendMessage - sends a message to the AI model and returns the response
+ * @param sessionId string - the session id for the conversation
+ * @param message string - the message to send
+ * @param mtype string - the type of message (ai or user)
+ * @return StartConversationResponse - the response containing the message and session id
+ * @return error - error if the message fails to send
+ */
 func (s *AiService) SendMessage(sessionId string, message string, mtype string) (*StartConversationResponse, error) {
 	var outputMessage string
 	var msg llms.MessageContent
@@ -93,6 +109,7 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 
 	msgHistory := *messageHistory
 
+	// check if the message type is ai or user - if ai, set the role to system
 	if mtype == "ai" {
 		msg = llms.MessageContent{
 			Role: llms.ChatMessageTypeSystem,
@@ -112,13 +129,17 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 
 	msgHistory = append(msgHistory, msg)
 
+	// generate content based on the message history
 	resp, err := s.llm.GenerateContent(context.Background(), msgHistory, llms.WithTools(availableTools))
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
 	}
+
+	// execute the tool calls (functions)
 	s.executeToolCalls(context.Background(), msgHistory, resp, sessionId)
 
+	// if the response contains function calls, run the model again with prompt to go to another step to prevent stopping the conversation
 	if resp.Choices[0].FuncCall == nil {
 		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
 		SaveMessageHistory(&msgHistory, sessionId)

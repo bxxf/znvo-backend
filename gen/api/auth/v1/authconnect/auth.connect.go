@@ -2,8 +2,8 @@
 //
 // Source: api/auth/v1/auth.proto
 
-// # Auth service (v1)
-
+// # Auth Service (v1)
+// This service is responsible for handling user authentication and registration.
 package authconnect
 
 import (

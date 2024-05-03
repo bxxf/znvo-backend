@@ -3,7 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
+	"encoding/json"
 	"io"
 	"net/http"
 
@@ -12,10 +12,9 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/bxxf/znvo-backend/internal/auth/model"
-	"github.com/bxxf/znvo-backend/internal/auth/util"
-	authUtil "github.com/bxxf/znvo-backend/internal/auth/util"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
+	"github.com/bxxf/znvo-backend/internal/redis"
 	"github.com/bxxf/znvo-backend/internal/utils"
 )
 
@@ -23,10 +22,11 @@ import (
 type AuthService struct {
 	logger           *logger.LoggerInstance
 	webAuthnInstance *webauthn.WebAuthn
+	redisService     *redis.RedisService
 }
 
 // NewAuthService creates a new AuthService instance with the provided logger and configuration.
-func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig) *AuthService {
+func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig, redisService *redis.RedisService) *AuthService {
 	webAuthn, err := NewWebAuthnClient(logger, cfg)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn object", "error", err)
@@ -35,6 +35,7 @@ func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig) *Au
 	return &AuthService{
 		logger:           logger,
 		webAuthnInstance: webAuthn,
+		redisService:     redisService,
 	}
 }
 
@@ -57,33 +58,60 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID stri
 	session.Challenge = base64.RawStdEncoding.EncodeToString([]byte(session.Challenge))
 
 	user := model.NewWebAuthnUser([]byte(userID), userID)
+
+	// marshal response body to string for use in FinishRegistration
 	resBodyBytes, err := jsoniter.MarshalToString(resBody)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to marshal response body", *as.logger)
 	}
 
+	// fake request body
 	req := &http.Request{
 		Body: io.NopCloser(bytes.NewBufferString(resBodyBytes)),
 	}
 
+	// finish registration
 	credential, err := as.webAuthnInstance.FinishRegistration(&user, *session, req)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to finish registration", *as.logger)
 	}
 
-	authUtil.UserCredentials[userID] = credential
+	// marshal credential to JSON and store in Redis
+	credJson, err := json.Marshal(credential)
+	if err != nil {
+		return nil, utils.HandleError(err, "failed to marshal credential", *as.logger)
+	}
+
+	// TOOO. encrypt the credential before storing in Redis
+
+	go func() {
+		redisClient := as.redisService.GetClient()
+		_, err = redisClient.Set(redisClient.Context(), "cred:"+userID, string(credJson), 0).Result()
+
+	}()
+
+	// TODO: STORE public key in database
 	return credential, nil
 }
 
 // InitializeLogin starts the login process for an existing user identified by userId.
 // It returns session data and credential assertion options for the client to complete the login.
 func (as *AuthService) InitializeLogin(userID string) (*webauthn.SessionData, *protocol.CredentialAssertion, error) {
-	if _, ok := authUtil.UserCredentials[userID]; !ok {
-		return nil, nil, fmt.Errorf("user %s not found", userID)
+
+	redisClient := as.redisService.GetClient()
+	credJson, err := redisClient.Get(redisClient.Context(), "cred:"+userID).Result()
+
+	if err != nil {
+		return nil, nil, utils.HandleError(err, "failed to retrieve credential from Redis", *as.logger)
 	}
 
-	user := model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{*util.UserCredentials[userID]})
-	options, sessionData, err := as.webAuthnInstance.BeginLogin(user)
+	var cred webauthn.Credential
+	err = json.Unmarshal([]byte(credJson), &cred)
+	if err != nil {
+		return nil, nil, utils.HandleError(err, "failed to unmarshal credential", *as.logger)
+	}
+	//user := model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{*util.UserCredentials[userID]})
+	options, sessionData, err := as.webAuthnInstance.BeginLogin(model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{cred}))
 	if err != nil {
 		return nil, nil, utils.HandleError(err, "failed to begin login", *as.logger)
 	}
@@ -96,11 +124,19 @@ func (as *AuthService) InitializeLogin(userID string) (*webauthn.SessionData, *p
 func (as *AuthService) FinishLogin(sessionData *webauthn.SessionData, userID string, resBody map[string]interface{}) (*webauthn.Credential, error) {
 	sessionData.Challenge = base64.RawStdEncoding.EncodeToString([]byte(sessionData.Challenge))
 
-	if _, ok := authUtil.UserCredentials[userID]; !ok {
-		return nil, fmt.Errorf("user %s not found", userID)
+	redisClient := as.redisService.GetClient()
+	credJson, err := redisClient.Get(redisClient.Context(), "cred:"+userID).Result()
+
+	if err != nil {
+		return nil, utils.HandleError(err, "failed to retrieve credential from Redis", *as.logger)
 	}
 
-	user := model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{*authUtil.UserCredentials[userID]})
+	var cred webauthn.Credential
+	err = json.Unmarshal([]byte(credJson), &cred)
+	if err != nil {
+		return nil, utils.HandleError(err, "failed to unmarshal credential", *as.logger)
+	}
+	// user := model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{*authUtil.UserCredentials[userID]})
 	resBodyBytes, err := jsoniter.MarshalToString(resBody)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to marshal response body", *as.logger)
@@ -110,7 +146,8 @@ func (as *AuthService) FinishLogin(sessionData *webauthn.SessionData, userID str
 		Body: io.NopCloser(bytes.NewBufferString(resBodyBytes)),
 	}
 
-	credential, err := as.webAuthnInstance.FinishLogin(user, *sessionData, req)
+	credential, err := as.webAuthnInstance.FinishLogin(model.NewWebAuthnUserWithCredentials([]byte(userID), userID, []webauthn.Credential{cred}), *sessionData, req)
+
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to finish login", *as.logger)
 	}

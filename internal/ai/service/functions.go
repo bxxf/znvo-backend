@@ -52,7 +52,7 @@ var availableTools = []llms.Tool{
 		Type: "function",
 		Function: &llms.FunctionDefinition{
 			Name:        "endSession",
-			Description: "End the current session",
+			Description: "End the session",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -79,6 +79,7 @@ func (s *AiService) executeToolCalls(ctx context.Context, messageHistory []llms.
 	errors := make(chan error)
 
 	for _, toolCall := range resp.Choices[0].ToolCalls {
+
 		go func(toolCall llms.ToolCall) {
 			logger.Info("Tool call: ", toolCall.FunctionCall.Name)
 			fmt.Println("Tool args: ", toolCall.FunctionCall.Arguments)

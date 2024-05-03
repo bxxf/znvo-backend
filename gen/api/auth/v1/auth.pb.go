@@ -4,7 +4,9 @@
 // 	protoc        (unknown)
 // source: api/auth/v1/auth.proto
 
-// # Auth service (v1)
+//
+//# Auth Service (v1)
+//This service is responsible for handling user authentication and registration.
 
 package auth
 
@@ -23,6 +25,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request to initialize a registration
 type InitializeRegisterRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -61,6 +64,7 @@ func (*InitializeRegisterRequest) Descriptor() ([]byte, []int) {
 	return file_api_auth_v1_auth_proto_rawDescGZIP(), []int{0}
 }
 
+// Response to initialize a registration - contains the session ID and publickey options
 type InitializeRegisterResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -116,6 +120,7 @@ func (x *InitializeRegisterResponse) GetOptions() string {
 	return ""
 }
 
+// Request to finish a registration - contains the session ID, user ID, credential ID, client data, and attestation
 type FinishRegisterRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -195,6 +200,7 @@ func (x *FinishRegisterRequest) GetAttestation() string {
 	return ""
 }
 
+// Response to finish a registration - contains the JWT token
 type FinishRegisterResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -242,6 +248,7 @@ func (x *FinishRegisterResponse) GetToken() string {
 	return ""
 }
 
+// Request to get a user
 type GetUserRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -289,6 +296,7 @@ func (x *GetUserRequest) GetToken() string {
 	return ""
 }
 
+// Response to get a user - contains the user ID
 type GetUserResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -336,6 +344,7 @@ func (x *GetUserResponse) GetId() string {
 	return ""
 }
 
+// Request to initialize a login
 type InitializeLoginRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -383,6 +392,7 @@ func (x *InitializeLoginRequest) GetUserid() string {
 	return ""
 }
 
+// Response to initialize a login - contains the session ID and publickey options
 type InitializeLoginResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -438,6 +448,7 @@ func (x *InitializeLoginResponse) GetOptions() string {
 	return ""
 }
 
+// Request to finish a login - contains the user ID, session ID, credential ID, auth data, client data, and signature
 type FinishLoginRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -525,6 +536,7 @@ func (x *FinishLoginRequest) GetSignature() string {
 	return ""
 }
 
+// Response to finish a login - contains the JWT token
 type FinishLoginResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

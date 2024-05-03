@@ -123,12 +123,11 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 		return nil, utils.HandleError(err, "failed to get session data", *ar.logger)
 	}
 
-	credential, err := ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
+	// Check for errors
+	_, err = ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to finish registration", *ar.logger)
 	}
-
-	ar.logger.Debug("Registration completed for user " + string(credential.PublicKey))
 
 	token, err := ar.tokenRepository.CreateAccessToken(req.Msg.GetUserid())
 	if err != nil {

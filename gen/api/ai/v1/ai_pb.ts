@@ -3,12 +3,17 @@
 /* eslint-disable */
 // @ts-nocheck
 
-// # Ai Service
+//
+//# AI Service (v1)
+//This service is responsible for handling the requests calling the LLM model.
+//The service is responsible for starting a chat session and streaming back responses.
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 
 /**
+ * The type of message being sent
+ *
  * @generated from enum ai.v1.MessageType
  */
 export enum MessageType {
@@ -36,6 +41,11 @@ export enum MessageType {
    * @generated from enum value: CORRELATION = 4;
    */
   CORRELATION = 4,
+
+  /**
+   * @generated from enum value: ENDSESSION = 5;
+   */
+  ENDSESSION = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(MessageType)
 proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
@@ -44,9 +54,12 @@ proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
   { no: 2, name: "NUTRITION" },
   { no: 3, name: "MOOD" },
   { no: 4, name: "CORRELATION" },
+  { no: 5, name: "ENDSESSION" },
 ]);
 
 /**
+ * Request to start a chat session
+ *
  * @generated from message ai.v1.StartSessionRequest
  */
 export class StartSessionRequest extends Message<StartSessionRequest> {
@@ -84,6 +97,8 @@ export class StartSessionRequest extends Message<StartSessionRequest> {
 }
 
 /**
+ * Response to starting a chat session
+ *
  * @generated from message ai.v1.StartSessionResponse
  */
 export class StartSessionResponse extends Message<StartSessionResponse> {
@@ -133,6 +148,8 @@ export class StartSessionResponse extends Message<StartSessionResponse> {
 }
 
 /**
+ * Request to send a message to the chat session
+ *
  * @generated from message ai.v1.SendMsgRequest
  */
 export class SendMsgRequest extends Message<SendMsgRequest> {
@@ -182,6 +199,8 @@ export class SendMsgRequest extends Message<SendMsgRequest> {
 }
 
 /**
+ * Response to sending a message to the chat session
+ *
  * @generated from message ai.v1.SendMsgResponse
  */
 export class SendMsgResponse extends Message<SendMsgResponse> {

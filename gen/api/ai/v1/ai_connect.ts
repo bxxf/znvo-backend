@@ -3,18 +3,25 @@
 /* eslint-disable */
 // @ts-nocheck
 
-// # Ai Service
+//
+//# AI Service (v1)
+//This service is responsible for handling the requests calling the LLM model.
+//The service is responsible for starting a chat session and streaming back responses.
 
 import { SendMsgRequest, SendMsgResponse, StartSessionRequest, StartSessionResponse } from "./ai_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
+ * The AI service is responsible for handling the requests calling the LLM model.
+ *
  * @generated from service ai.v1.AiService
  */
 export const AiService = {
   typeName: "ai.v1.AiService",
   methods: {
     /**
+     * Start a chat session - this will return a session ID and start streaming responses
+     *
      * @generated from rpc ai.v1.AiService.StartSession
      */
     startSession: {
@@ -24,6 +31,8 @@ export const AiService = {
       kind: MethodKind.ServerStreaming,
     },
     /**
+     * Send a message to the chat session
+     *
      * @generated from rpc ai.v1.AiService.SendMsg
      */
     sendMsg: {
