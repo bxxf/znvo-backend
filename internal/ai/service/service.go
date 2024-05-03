@@ -42,10 +42,11 @@ func InitializeModel() *openai.LLM {
 func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 
 	ctx := context.Background()
+	// define initial message history with prompt
 	messageHistory := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, prompt),
 	}
-
+	// generate first message based on the prompt
 	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
 
 	if err != nil {
@@ -53,29 +54,36 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 		return nil, err
 	}
 
+	// create message content struct for the response
 	newContent := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content),
 	}
 
+	// append the response to the message history
 	messageHistory = append(messageHistory, newContent...)
-	uid := uuid.New().String()
+	sessionId := uuid.New().String()
 
-	_, found := s.streamStore.GetStream(uid)
-	if found {
+	// if the stream already exists, generate a new uid
+	_, found := s.streamStore.GetStream(sessionId)
+
+	// loop until a unique stream id is found
+	for found {
 		s.logger.Error("Stream already exists")
-		uid = uuid.New().String()
+		sessionId = uuid.New().String()
+		_, found = s.streamStore.GetStream(sessionId)
 	}
 
-	SaveMessageHistory(&messageHistory, uid)
+	// save the message history to the stream store
+	SaveMessageHistory(&messageHistory, sessionId)
 
 	return &StartConversationResponse{
 		Message:   resp.Choices[0].Content,
-		SessionID: uid,
+		SessionID: sessionId,
 	}, nil
 }
 
 func (s *AiService) SendMessage(sessionId string, message string) (*StartConversationResponse, error) {
-	var outMsg string
+	var outputMessage string
 	messageHistory, ok := LoadMessageHistory(sessionId)
 	if !ok {
 		s.logger.Error("Failed to load message history")
@@ -99,30 +107,26 @@ func (s *AiService) SendMessage(sessionId string, message string) (*StartConvers
 		return nil, err
 	}
 
-	s.executeToolCalls(context.Background(), s.llm, msgHistory, resp, sessionId)
+	if resp.Choices[0].FuncCall == nil {
+		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
+		SaveMessageHistory(&msgHistory, sessionId)
+		outputMessage = resp.Choices[0].Content
 
-	msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content)}...)
-	if resp.Choices[0].Content != "" {
-		outMsg = resp.Choices[0].Content
 	} else {
-
-		msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeSystem, "Send another question or exit the conversation")}...)
-		resp, err := s.llm.GenerateContent(context.Background(), msgHistory, llms.WithTools(availableTools))
+		s.executeToolCalls(context.Background(), msgHistory, resp, sessionId)
+		nRes, err := s.SendMessage(sessionId, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.")
 		if err != nil {
-			s.logger.Error("Failed to generate content: ", err)
 			return nil, err
 		}
-
-		msgHistory = append(msgHistory, []llms.MessageContent{llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content)}...)
-
-		outMsg = resp.Choices[0].Content
-
+		outputMessage = nRes.Message
 	}
 
-	SaveMessageHistory(&msgHistory, sessionId)
+	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
+	s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
+	s.logger.Debug("Message history: ", msgHistory)
 
 	return &StartConversationResponse{
-		Message:   outMsg,
+		Message:   outputMessage,
 		SessionID: sessionId,
 	}, nil
 }

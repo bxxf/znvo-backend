@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	"github.com/bxxf/znvo-backend/internal/ai/service"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/logger"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Routers - defines structure for gRPC requests and responses and format the data to the correct format
@@ -75,7 +76,7 @@ func (ar *AiRouter) StartSession(
 			fmt.Println("Stream context cancelled, closing stream")
 			return ctx.Err()
 		default:
-			time.Sleep(time.Minute) // Adjust according to your requirements
+			time.Sleep(time.Minute * 10)
 		}
 	}
 

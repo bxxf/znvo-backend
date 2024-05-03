@@ -1,12 +1,15 @@
 syntax = "proto3";
 import "google/protobuf/struct.proto";
 
-// # Auth service (v1)
-
+/*
+# Auth Service (v1)
+This service is responsible for handling user authentication and registration.
+*/
 package auth.v1;
 
 option go_package = "github.com/bxxf/znvo-backend/gen/api/auth/v1;auth";
- 
+
+// Auth Service
 service AuthService {
   rpc InitializeRegister (InitializeRegisterRequest) returns (InitializeRegisterResponse) {}
   rpc FinishRegister (FinishRegisterRequest) returns (FinishRegisterResponse) {}
@@ -15,14 +18,17 @@ service AuthService {
   rpc FinishLogin (FinishLoginRequest) returns (FinishLoginResponse) {}
 }
 
+// Request to initialize a registration
 message InitializeRegisterRequest {
 }
 
+// Response to initialize a registration - contains the session ID and publickey options
 message InitializeRegisterResponse {
   string sid = 1;
   string options = 2;
 }
 
+// Request to finish a registration - contains the session ID, user ID, credential ID, client data, and attestation
 message FinishRegisterRequest {
   string sid = 1;
   string userid = 2;
@@ -31,27 +37,33 @@ message FinishRegisterRequest {
   string attestation = 5;
 }
 
+// Response to finish a registration - contains the JWT token
 message FinishRegisterResponse {
   string token = 1;
 }
 
+// Request to get a user
 message GetUserRequest {
   string token = 1;
 }
 
+// Response to get a user - contains the user ID
 message GetUserResponse {
   string id = 1;
 }
 
+// Request to initialize a login
 message InitializeLoginRequest {
   string userid = 1;
 }
 
+// Response to initialize a login - contains the session ID and publickey options
 message InitializeLoginResponse {
   string sid = 1;
   string options = 2;
 }
 
+// Request to finish a login - contains the user ID, session ID, credential ID, auth data, client data, and signature
 message FinishLoginRequest {
   string userid = 1;
   string sid = 2;
@@ -61,6 +73,7 @@ message FinishLoginRequest {
   string signature = 6;
 }
 
+// Response to finish a login - contains the JWT token
 message FinishLoginResponse {
   string token = 1;
 }

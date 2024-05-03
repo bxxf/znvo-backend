@@ -1,12 +1,16 @@
 syntax = "proto3";
 import "google/protobuf/struct.proto";
 
-// # Ai Service
-
+/*
+# AI Service (v1)
+This service is responsible for handling the requests calling the LLM model.
+The service is responsible for starting a chat session and streaming back responses.
+*/
 package ai.v1;
 
 option go_package = "github.com/bxxf/znvo-backend/gen/api/ai/v1;ai";
 
+// The type of message being sent
 enum MessageType {
     CHAT = 0;
     ACTIVITIES = 1;
@@ -15,27 +19,35 @@ enum MessageType {
     CORRELATION = 4;
 }
 
+// The AI service is responsible for handling the requests calling the LLM model.
 service AiService {
+    // Start a chat session - this will return a session ID and start streaming responses
     rpc StartSession (StartSessionRequest) returns (stream StartSessionResponse);
+    // Send a message to the chat session
     rpc SendMsg (SendMsgRequest) returns (SendMsgResponse);
 }
 
+
+// Request to start a chat session
 message StartSessionRequest {
    string user_token = 1;
 }
 
+// Response to starting a chat session
 message StartSessionResponse {
    string message = 1;
    string session_id = 2;
    MessageType message_type = 3;
 }
 
+// Request to send a message to the chat session
 message SendMsgRequest {
    string user_token = 1;
    string message = 2;
    string session_id = 3;
 }
 
+// Response to sending a message to the chat session
 message SendMsgResponse {
    string message = 1;
 }

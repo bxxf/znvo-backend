@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+
+	"github.com/tmc/langchaingo/llms"
 
 	"github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	"github.com/bxxf/znvo-backend/internal/logger"
-	"github.com/tmc/langchaingo/llms"
 )
 
 var availableTools = []llms.Tool{
@@ -47,6 +47,24 @@ var availableTools = []llms.Tool{
 			},
 		},
 	},
+
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "endSession",
+			Description: "End the current session",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"message": map[string]any{
+						"type":        "string",
+						"description": "A message to display to the user before ending the session",
+					},
+				},
+				"required": []string{"message"},
+			},
+		},
+	},
 }
 
 type Activity struct {
@@ -55,39 +73,67 @@ type Activity struct {
 	Time     string `json:"time"`
 }
 
-func (s *AiService) executeToolCalls(ctx context.Context, llm llms.Model, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) []llms.MessageContent {
+func (s *AiService) executeToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) []llms.MessageContent {
 	logger := logger.NewLogger()
+	done := make(chan bool)
+	errors := make(chan error)
+
 	for _, toolCall := range resp.Choices[0].ToolCalls {
-		logger.Info("Tool call: ", toolCall.FunctionCall.Name)
-		fmt.Println("Tool args: ", toolCall.FunctionCall.Arguments)
-		switch toolCall.FunctionCall.Name {
-		case "parseActivities":
-			var args struct {
-				Activities []Activity `json:"activities"`
+		go func(toolCall llms.ToolCall) {
+			logger.Info("Tool call: ", toolCall.FunctionCall.Name)
+			fmt.Println("Tool args: ", toolCall.FunctionCall.Arguments)
+
+			switch toolCall.FunctionCall.Name {
+			case "parseActivities":
+				var args struct {
+					Activities []Activity `json:"activities"`
+				}
+				err := json.Unmarshal([]byte(toolCall.FunctionCall.Arguments), &args)
+				if err != nil {
+					errors <- err
+					return
+				}
+				responseJSON, err := json.Marshal(args.Activities)
+				if err != nil {
+					errors <- err
+					return
+				}
+				s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+					Message:     string(responseJSON),
+					SessionId:   streamID,
+					MessageType: aiv1.MessageType_ACTIVITIES,
+				})
+
+			case "endSession":
+				var args struct {
+					Message string `json:"message"`
+				}
+				err := json.Unmarshal([]byte(toolCall.FunctionCall.Arguments), &args)
+				if err != nil {
+					errors <- err
+					return
+				}
+				s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+					Message:     args.Message,
+					SessionId:   streamID,
+					MessageType: aiv1.MessageType_CHAT,
+				})
+
+			default:
+				logger.Info("Unknown tool call: ", toolCall.FunctionCall.Name)
 			}
-			if err := json.Unmarshal([]byte(toolCall.FunctionCall.Arguments), &args); err != nil {
-				log.Fatal(err)
-			}
-
-			// Convert the response back to a JSON string
-			responseJSON, err := json.Marshal(args.Activities)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Printf("Response: %s\n", responseJSON)
-
-			s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
-				Message:     string(responseJSON),
-				SessionId:   streamID,
-				MessageType: aiv1.MessageType_ACTIVITIES,
-			})
-
-		default:
-			log.Fatalf("Unsupported tool: %s", toolCall.FunctionCall.Name)
-		}
+			done <- true
+		}(toolCall)
 	}
 
+	for i := 0; i < len(resp.Choices[0].ToolCalls); i++ {
+		select {
+		case <-done:
+			// continue
+		case err := <-errors:
+			logger.Error("Error executing tool call: ", err)
+			return messageHistory
+		}
+	}
 	return messageHistory
 }
