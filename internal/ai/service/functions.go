@@ -36,10 +36,14 @@ var availableTools = []llms.Tool{
 								},
 								"time": map[string]any{
 									"type":        "string",
-									"description": "Time of the activity when it was done as a 24 hour string (e.g., '8:00', '12:00'). If it's now, do not provide this field.",
+									"description": "Exact time of the activity as a string (e.g., '8:00', '21:30')",
+								},
+								"mood": map[string]any{
+									"type":        "string",
+									"description": "Mood level of the user during the activity (0-100) - 0 being the worst and 100 being the best - can be guessed based on the user's responses or 1-10 scale - times ten    ",
 								},
 							},
-							"required": []string{"name"},
+							"required": []string{"name", "duration", "mood"},
 						},
 					},
 				},
@@ -71,6 +75,7 @@ type Activity struct {
 	Name     string `json:"name"`
 	Duration string `json:"duration"`
 	Time     string `json:"time"`
+	Mood     string `json:"mood"`
 }
 
 func (s *AiService) executeToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) []llms.MessageContent {
