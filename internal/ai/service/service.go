@@ -82,8 +82,9 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 	}, nil
 }
 
-func (s *AiService) SendMessage(sessionId string, message string) (*StartConversationResponse, error) {
+func (s *AiService) SendMessage(sessionId string, message string, mtype string) (*StartConversationResponse, error) {
 	var outputMessage string
+	var msg llms.MessageContent
 	messageHistory, ok := LoadMessageHistory(sessionId)
 	if !ok {
 		s.logger.Error("Failed to load message history")
@@ -92,11 +93,21 @@ func (s *AiService) SendMessage(sessionId string, message string) (*StartConvers
 
 	msgHistory := *messageHistory
 
-	msg := llms.MessageContent{
-		Role: llms.ChatMessageTypeHuman,
-		Parts: []llms.ContentPart{
-			llms.TextPart(message),
-		},
+	if mtype == "ai" {
+		msg = llms.MessageContent{
+			Role: llms.ChatMessageTypeSystem,
+			Parts: []llms.ContentPart{
+				llms.TextPart(message),
+			},
+		}
+	} else {
+
+		msg = llms.MessageContent{
+			Role: llms.ChatMessageTypeHuman,
+			Parts: []llms.ContentPart{
+				llms.TextPart(message),
+			},
+		}
 	}
 
 	msgHistory = append(msgHistory, msg)
@@ -106,15 +117,17 @@ func (s *AiService) SendMessage(sessionId string, message string) (*StartConvers
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
 	}
+	s.executeToolCalls(context.Background(), msgHistory, resp, sessionId)
 
 	if resp.Choices[0].FuncCall == nil {
 		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
 		SaveMessageHistory(&msgHistory, sessionId)
 		outputMessage = resp.Choices[0].Content
 
-	} else {
-		s.executeToolCalls(context.Background(), msgHistory, resp, sessionId)
-		nRes, err := s.SendMessage(sessionId, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.")
+		// if the function call is not endSession then recursively call message sending
+	} else if resp.Choices[0].FuncCall.Name != "endSession" {
+
+		nRes, err := s.SendMessage(sessionId, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", "ai")
 		if err != nil {
 			return nil, err
 		}

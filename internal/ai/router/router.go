@@ -91,19 +91,16 @@ func (ar *AiRouter) SendMsg(ctx context.Context, req *connect.Request[aiv1.SendM
 		return nil, status.Error(codes.InvalidArgument, "Message is required")
 	}
 
-	resp, err := ar.aiService.SendMessage(sessionID, message)
+	resp, err := ar.aiService.SendMessage(sessionID, message, "user")
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to send message")
 	}
 
-	if resp.Message != "" {
-
-		ar.streamStore.SendMessage(sessionID, &aiv1.StartSessionResponse{
-			Message:     resp.Message,
-			SessionId:   resp.SessionID,
-			MessageType: aiv1.MessageType_CHAT,
-		})
-	}
+	ar.streamStore.SendMessage(sessionID, &aiv1.StartSessionResponse{
+		Message:     resp.Message,
+		SessionId:   resp.SessionID,
+		MessageType: aiv1.MessageType_CHAT,
+	})
 
 	return &connect.Response[aiv1.SendMsgResponse]{
 		Msg: &aiv1.SendMsgResponse{
