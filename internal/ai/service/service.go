@@ -13,6 +13,20 @@ import (
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
+const (
+	conversationTimeout = 5 * time.Second
+	endSessionFuncName  = "endSession"
+)
+
+// MessageType represents the type of message (AI or User)
+type MessageType int
+
+const (
+	MessageTypeAI MessageType = iota
+	MessageTypeUser
+)
+
+// AiService represents the AI service
 type AiService struct {
 	logger      *logger.LoggerInstance
 	llm         *openai.LLM
@@ -20,21 +34,24 @@ type AiService struct {
 	chatService *chat.ChatService
 }
 
+// StartConversationResponse represents the response from starting a conversation
 type StartConversationResponse struct {
 	Message   string
 	SessionID string
 }
 
+// NewAiService creates a new instance of the AI service
 func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore, chatService *chat.ChatService) *AiService {
 	llm := InitializeModel()
 	return &AiService{
 		logger:      logger,
 		streamStore: streamStore,
-		llm:         llm,
 		chatService: chatService,
+		llm:         llm,
 	}
 }
 
+// InitializeModel initializes the AI model
 func InitializeModel() *openai.LLM {
 	llm, err := openai.New(openai.WithModel("gpt-3.5-turbo"))
 	if err != nil {
@@ -43,49 +60,34 @@ func InitializeModel() *openai.LLM {
 	return llm
 }
 
-/**
- * StartConversation - starts a conversation with the AI model and returns the stream
- * @return StartConversationResponse - the response containing the message and session id
- * @return error - error if the conversation fails to start
- */
-func (s *AiService) StartConversation() (*StartConversationResponse, error) {
+// StartConversation starts a conversation with the AI model and returns the response
+func (s *AiService) StartConversation(ctx context.Context) (*StartConversationResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, conversationTimeout)
+	defer cancel()
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	// define initial message history with prompt
+	// Define initial message history with prompt
 	messageHistory := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, prompt.Prompt),
 	}
-	// generate first message based on the prompt
-	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(availableTools))
 
+	// Generate first message based on the prompt
+	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(AvailableTools))
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
 	}
 
-	// create message content struct for the response
+	// Create message content struct for the response
 	newContent := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content),
 	}
-
-	// append the response to the message history
 	messageHistory = append(messageHistory, newContent...)
 
-	// generate a new session id
-	sessionId := uuid.New().String()
+	// Generate a unique session ID
+	sessionID := s.generateUniqueSessionID()
 
-	// if the stream already exists, generate a new uid
-	_, found := s.streamStore.GetStream(sessionId)
-
-	// loop until a unique stream id is found
-	for found {
-		s.logger.Error("Stream already exists")
-		sessionId = uuid.New().String()
-		_, found = s.streamStore.GetStream(sessionId)
-	}
-
-	// save the message history to the stream store
-	_, err = s.chatService.SaveMessageHistory(&messageHistory, sessionId)
+	// Save the message history to the stream store
+	_, err = s.chatService.SaveMessageHistory(&messageHistory, sessionID)
 	if err != nil {
 		s.logger.Error("Failed to save message history: ", err)
 		return nil, err
@@ -93,74 +95,72 @@ func (s *AiService) StartConversation() (*StartConversationResponse, error) {
 
 	return &StartConversationResponse{
 		Message:   resp.Choices[0].Content,
-		SessionID: sessionId,
+		SessionID: sessionID,
 	}, nil
 }
 
-/**
- * SendMessage - sends a message to the AI model and returns the response
- * @param sessionId string - the session id for the conversation
- * @param message string - the message to send
- * @param mtype string - the type of message (ai or user)
- * @return StartConversationResponse - the response containing the message and session id
- * @return error - error if the message fails to send
- */
-func (s *AiService) SendMessage(sessionId string, message string, mtype string) (*StartConversationResponse, error) {
+// generateUniqueSessionID generates a unique session ID
+func (s *AiService) generateUniqueSessionID() string {
+	sessionID := uuid.New().String()
+	for {
+		_, found := s.streamStore.GetStream(sessionID)
+		if !found {
+			break
+		}
+		s.logger.Error("Stream already exists")
+		sessionID = uuid.New().String()
+	}
+	return sessionID
+}
+
+// SendMessage sends a message to the AI model and returns the response
+func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, messageType MessageType) (*StartConversationResponse, error) {
 	var outputMessage string
-	var msg llms.MessageContent
-	messageHistory, error := s.chatService.LoadMessageHistory(sessionId)
-
-	if error != nil {
-		s.logger.Error("Failed to load message history: ", error)
-		return nil, error
+	messageHistoryPointer, err := s.chatService.LoadMessageHistory(sessionID)
+	if err != nil {
+		s.logger.Error("Failed to load message history: ", err)
+		return nil, err
 	}
 
-	msgHistory := *messageHistory
-
-	// check if the message type is ai or user - if ai, set the role to system
-	if mtype == "ai" {
-		msg = llms.MessageContent{
-			Role: llms.ChatMessageTypeSystem,
-			Parts: []llms.ContentPart{
-				llms.TextPart(message),
-			},
-		}
+	// Create message content based on the message type
+	var role llms.ChatMessageType
+	if messageType == MessageTypeAI {
+		role = llms.ChatMessageTypeSystem
 	} else {
-
-		msg = llms.MessageContent{
-			Role: llms.ChatMessageTypeHuman,
-			Parts: []llms.ContentPart{
-				llms.TextPart(message),
-			},
-		}
+		role = llms.ChatMessageTypeHuman
 	}
 
+	msg := llms.MessageContent{
+		Role: role,
+		Parts: []llms.ContentPart{
+			llms.TextPart(message),
+		},
+	}
+
+	msgHistory := *messageHistoryPointer
 	msgHistory = append(msgHistory, msg)
 
-	// generate content based on the message history
-	resp, err := s.llm.GenerateContent(context.Background(), msgHistory, llms.WithTools(availableTools))
+	// Generate content based on the message history
+	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools))
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
 	}
 
-	// execute the tool calls (functions)
-	s.executeToolCalls(context.Background(), msgHistory, resp, sessionId)
+	// Execute the tool calls (functions)
+	s.ExecuteToolCalls(ctx, msgHistory, resp, sessionID)
 
-	// if the response contains function calls, run the model again with prompt to go to another step to prevent stopping the conversation
 	if resp.Choices[0].FuncCall == nil {
 		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
-		s.chatService.SaveMessageHistory(&msgHistory, sessionId)
+		s.chatService.SaveMessageHistory(&msgHistory, sessionID)
 		outputMessage = resp.Choices[0].Content
-
-		// if the function call is not endSession then recursively call message sending
-	} else if resp.Choices[0].FuncCall.Name != "endSession" {
-
-		nRes, err := s.SendMessage(sessionId, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", "ai")
+	} else if resp.Choices[0].FuncCall.Name != endSessionFuncName {
+		// If the function call is not endSession, recursively call message sending
+		afterFuncRes, err := s.SendMessage(ctx, sessionID, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", MessageTypeAI)
 		if err != nil {
 			return nil, err
 		}
-		outputMessage = nRes.Message
+		outputMessage = afterFuncRes.Message
 	}
 
 	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
@@ -168,11 +168,12 @@ func (s *AiService) SendMessage(sessionId string, message string, mtype string) 
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
-		SessionID: sessionId,
+		SessionID: sessionID,
 	}, nil
 }
 
-func (s *AiService) CloseSession(sessionId string) {
-	s.streamStore.CloseSession(sessionId)
-	s.chatService.DeleteChatHistory(sessionId)
+// CloseSession closes the session and deletes the chat history
+func (s *AiService) CloseSession(sessionID string) {
+	s.streamStore.CloseSession(sessionID)
+	s.chatService.DeleteChatHistory(sessionID)
 }

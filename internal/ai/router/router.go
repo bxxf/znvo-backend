@@ -36,6 +36,8 @@ func NewAiRouter(logger *logger.LoggerInstance, tokenRepository *token.TokenRepo
 	}
 }
 
+var contx = context.Background()
+
 /* ------------------ AI Functions ------------------ */
 
 func (ar *AiRouter) StartSession(
@@ -57,7 +59,7 @@ func (ar *AiRouter) StartSession(
 
 	ar.logger.Debug("Starting session for user " + parsedToken.UserID)
 
-	resp, err := ar.aiService.StartConversation()
+	resp, err := ar.aiService.StartConversation(contx)
 	if err != nil {
 		return status.Error(codes.Internal, "Failed to start conversation")
 	}
@@ -95,7 +97,7 @@ func (ar *AiRouter) SendMsg(ctx context.Context, req *connect.Request[aiv1.SendM
 
 	go func() {
 
-		resp, err := ar.aiService.SendMessage(sessionID, message, "user")
+		resp, err := ar.aiService.SendMessage(contx, sessionID, message, service.MessageTypeUser)
 
 		if err != nil {
 			ar.logger.Error("Failed to send message: ", err)
