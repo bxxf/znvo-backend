@@ -3,13 +3,12 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/tmc/langchaingo/llms"
 
 	"github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
-	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
 // AvailableTools defines a list of functions that can be called by the LLM
@@ -33,18 +32,18 @@ var AvailableTools = []llms.Tool{
 								},
 								"duration": map[string]any{
 									"type":        "string",
-									"description": "Duration of the activity as a string (e.g., '30 minutes', '1 hour')",
+									"description": "Duration of the activity as a string (e.g., '30 minutes', '1 hour'). Can be empty if the user doesn't know the duration.",
 								},
 								"time": map[string]any{
-									"type":        "string",
-									"description": "Exact time of the activity as a string (e.g., '8:00', '21:30')",
+									"type":        "number",
+									"description": "How long AGO the activity took place in MINUTES (e.g., 5, 10, 15, 120). Can be empty or 0 if the user doesn't know the time OR if it's happening now - 0 means the activity is happening now",
 								},
 								"mood": map[string]any{
 									"type":        "string",
-									"description": "Mood level of the user during the activity (0-100)",
+									"description": "Mood level of the user during the activity (0-100) - can be on a scale 1-10 (times ten)",
 								},
 							},
-							"required": []string{"name", "mood"},
+							"required": []string{"name", "mood", "time"},
 						},
 					},
 				},
@@ -52,11 +51,12 @@ var AvailableTools = []llms.Tool{
 			},
 		},
 	},
+
 	{
 		Type: "function",
 		Function: &llms.FunctionDefinition{
 			Name:        "endSession",
-			Description: "End the session",
+			Description: "End the session. Gets called after all steps are done or 'endSession' is prompted",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -72,47 +72,22 @@ var AvailableTools = []llms.Tool{
 }
 
 // ExecuteToolCalls handles the invocation of tools based on the response choices and manages concurrency and error handling.
-func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) []llms.MessageContent {
-	logger := logger.NewLogger()
-	toolCallCount := len(resp.Choices[0].ToolCalls)
-	done := make(chan bool, toolCallCount)
-	errs := make(chan error, toolCallCount)
-
-	for _, toolCall := range resp.Choices[0].ToolCalls {
-		go func(toolCall llms.ToolCall) {
-			logger.Info("Tool call: ", toolCall.FunctionCall.Name)
-			fmt.Println("Tool args: ", toolCall.FunctionCall.Arguments)
-
-			if err := s.handleToolCall(toolCall, streamID); err != nil {
-				errs <- err
-			} else {
-				done <- true
-			}
-		}(toolCall)
+func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) ([]llms.MessageContent, error) {
+	if len(resp.Choices[0].ToolCalls) == 0 {
+		return messageHistory, nil
 	}
+	switch resp.Choices[0].ToolCalls[0].FunctionCall.Name {
 
-	for i := 0; i < toolCallCount; i++ {
-		select {
-		case <-done:
-		case err := <-errs:
-			logger.Error("Error executing tool call: ", err)
-			return messageHistory
-		}
-	}
-
-	return messageHistory
-}
-
-func (s *AiService) handleToolCall(toolCall llms.ToolCall, streamID string) error {
-	switch toolCall.FunctionCall.Name {
 	case "parseActivities":
-		return s.handleParseActivities(toolCall.FunctionCall.Arguments, streamID)
+		return messageHistory, s.handleParseActivities(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID)
 	case "endSession":
-		return s.handleEndSession(toolCall.FunctionCall.Arguments, streamID)
+		return messageHistory, s.handleEndSession(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID)
 	default:
-		logger.NewLogger().Info("Unknown tool call: ", toolCall.FunctionCall.Name)
-		return nil
+		s.logger.Info("Unknown tool call: ", resp.Choices[0].ToolCalls[0].FunctionCall.Name)
+		return messageHistory, nil
 	}
+
+	return messageHistory, nil
 }
 
 func (s *AiService) handleParseActivities(args string, streamID string) error {
@@ -121,6 +96,19 @@ func (s *AiService) handleParseActivities(args string, streamID string) error {
 	}
 	if err := json.Unmarshal([]byte(args), &activities); err != nil {
 		return err
+	}
+
+	for i, activity := range activities.Activities {
+		currentTime := time.Now()
+
+		if activity.Time > 0 {
+			currentTime = currentTime.Add(time.Duration(-activity.Time) * time.Minute)
+		}
+
+		activity.Time = int(currentTime.Unix())
+
+		activities.Activities[i] = activity
+
 	}
 
 	responseJSON, err := json.Marshal(activities.Activities)
@@ -159,6 +147,6 @@ func (s *AiService) handleEndSession(args string, streamID string) error {
 type Activity struct {
 	Name     string `json:"name"`
 	Duration string `json:"duration"`
-	Time     string `json:"time"`
+	Time     int    `json:"time"`
 	Mood     string `json:"mood"`
 }

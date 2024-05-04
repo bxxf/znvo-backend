@@ -148,11 +148,14 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	}
 
 	// Execute the tool calls (functions)
-	s.ExecuteToolCalls(ctx, msgHistory, resp, sessionID)
+	newHistory, err := s.ExecuteToolCalls(ctx, msgHistory, resp, sessionID)
+	if err != nil {
+		s.logger.Error("Failed to execute tool calls: ", err)
+		return nil, err
+	}
 
 	if resp.Choices[0].FuncCall == nil {
-		msgHistory = append(msgHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
-		s.chatService.SaveMessageHistory(&msgHistory, sessionID)
+		newHistory = append(newHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
 		outputMessage = resp.Choices[0].Content
 	} else if resp.Choices[0].FuncCall.Name != endSessionFuncName {
 		// If the function call is not endSession, recursively call message sending
@@ -161,10 +164,17 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 			return nil, err
 		}
 		outputMessage = afterFuncRes.Message
+	} else {
+		// If the function call is endSession, close the session
+		s.CloseSession(sessionID)
+
 	}
+
+	s.chatService.SaveMessageHistory(&newHistory, sessionID)
 
 	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
 	s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
+	s.logger.Debug("Message history: ", newHistory)
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
