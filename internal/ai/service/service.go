@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
+	"github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	"github.com/bxxf/znvo-backend/internal/ai/chat"
 	"github.com/bxxf/znvo-backend/internal/ai/prompt"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -38,6 +40,7 @@ type AiService struct {
 type StartConversationResponse struct {
 	Message   string
 	SessionID string
+	MessageId string
 }
 
 // NewAiService creates a new instance of the AI service
@@ -81,6 +84,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	newContent := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content),
 	}
+
 	messageHistory = append(messageHistory, newContent...)
 
 	// Generate a unique session ID
@@ -140,15 +144,36 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	msgHistory := *messageHistoryPointer
 	msgHistory = append(msgHistory, msg)
 
+	messageId := uuid.New().String()
+	skipStreaming := false
+
 	// Generate content based on the message history
-	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools))
+	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools), llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+
+		// if chunk is json skip streaming for whole message id
+		if strings.Contains(string(chunk), "{") {
+			skipStreaming = true
+		}
+
+		if !skipStreaming {
+
+			s.streamStore.SendMessage(sessionID, &ai.StartSessionResponse{
+				Message:     string(chunk),
+				SessionId:   sessionID,
+				MessageId:   messageId,
+				MessageType: ai.MessageType_CHAT_PARTIAL,
+			})
+		}
+
+		return nil
+	}))
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
 	}
 
 	// Execute the tool calls (functions)
-	newHistory, err := s.ExecuteToolCalls(ctx, msgHistory, resp, sessionID)
+	newHistory, err := s.ExecuteToolCalls(ctx, msgHistory, resp, sessionID, messageId)
 	if err != nil {
 		s.logger.Error("Failed to execute tool calls: ", err)
 		return nil, err
@@ -178,6 +203,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
+		MessageId: messageId,
 		SessionID: sessionID,
 	}, nil
 }

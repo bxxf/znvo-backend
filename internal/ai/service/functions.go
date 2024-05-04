@@ -36,7 +36,7 @@ var AvailableTools = []llms.Tool{
 								},
 								"time": map[string]any{
 									"type":        "number",
-									"description": "How long AGO the activity took place in MINUTES (e.g., 5, 10, 15, 120). Can be empty or 0 if the user doesn't know the time OR if it's happening now - 0 means the activity is happening now",
+									"description": "How long AGO the activity took place in MINUTES (e.g., 5, 10, 15, 120). Can be empty or 0 if the user doesn't know the time OR if it's happening now - 0 means the activity is happening now. If the activity is happening now, the time should be 0 + duration of the activity in minutes.",
 								},
 								"mood": map[string]any{
 									"type":        "string",
@@ -72,14 +72,14 @@ var AvailableTools = []llms.Tool{
 }
 
 // ExecuteToolCalls handles the invocation of tools based on the response choices and manages concurrency and error handling.
-func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string) ([]llms.MessageContent, error) {
+func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.MessageContent, resp *llms.ContentResponse, streamID string, messageID string) ([]llms.MessageContent, error) {
 	if len(resp.Choices[0].ToolCalls) == 0 {
 		return messageHistory, nil
 	}
 	switch resp.Choices[0].ToolCalls[0].FunctionCall.Name {
 
 	case "parseActivities":
-		return messageHistory, s.handleParseActivities(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID)
+		return messageHistory, s.handleParseActivities(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID, messageID)
 	case "endSession":
 		return messageHistory, s.handleEndSession(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID)
 	default:
@@ -90,7 +90,7 @@ func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.
 	return messageHistory, nil
 }
 
-func (s *AiService) handleParseActivities(args string, streamID string) error {
+func (s *AiService) handleParseActivities(args string, streamID string, messageId string) error {
 	var activities struct {
 		Activities []Activity `json:"activities"`
 	}
@@ -118,6 +118,7 @@ func (s *AiService) handleParseActivities(args string, streamID string) error {
 
 	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
 		Message:     string(responseJSON),
+		MessageId:   messageId,
 		SessionId:   streamID,
 		MessageType: aiv1.MessageType_ACTIVITIES,
 	})
@@ -136,6 +137,7 @@ func (s *AiService) handleEndSession(args string, streamID string) error {
 	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
 		Message:     message.Message,
 		SessionId:   streamID,
+		MessageId:   "end",
 		MessageType: aiv1.MessageType_ENDSESSION,
 	})
 

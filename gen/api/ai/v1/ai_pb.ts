@@ -46,6 +46,11 @@ export enum MessageType {
    * @generated from enum value: ENDSESSION = 5;
    */
   ENDSESSION = 5,
+
+  /**
+   * @generated from enum value: CHAT_PARTIAL = 6;
+   */
+  CHAT_PARTIAL = 6,
 }
 // Retrieve enum metadata with: proto3.getEnumType(MessageType)
 proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
@@ -55,6 +60,7 @@ proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
   { no: 3, name: "MOOD" },
   { no: 4, name: "CORRELATION" },
   { no: 5, name: "ENDSESSION" },
+  { no: 6, name: "CHAT_PARTIAL" },
 ]);
 
 /**
@@ -117,6 +123,11 @@ export class StartSessionResponse extends Message<StartSessionResponse> {
    */
   messageType = MessageType.CHAT;
 
+  /**
+   * @generated from field: string message_id = 4;
+   */
+  messageId = "";
+
   constructor(data?: PartialMessage<StartSessionResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -128,6 +139,7 @@ export class StartSessionResponse extends Message<StartSessionResponse> {
     { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "session_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "message_type", kind: "enum", T: proto3.getEnumType(MessageType) },
+    { no: 4, name: "message_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StartSessionResponse {

@@ -64,7 +64,7 @@ func (ar *AiRouter) StartSession(
 		return status.Error(codes.Internal, "Failed to start conversation")
 	}
 
-	ar.streamStore.SaveStream(resp.SessionID, stream)
+	ar.streamStore.SaveStream(resp.SessionID, stream, parsedToken.UserID)
 
 	stream.Send(&aiv1.StartSessionResponse{
 		SessionId:   resp.SessionID,
@@ -90,6 +90,21 @@ func (ar *AiRouter) StartSession(
 func (ar *AiRouter) SendMsg(ctx context.Context, req *connect.Request[aiv1.SendMsgRequest]) (*connect.Response[aiv1.SendMsgResponse], error) {
 	message := req.Msg.Message
 	sessionID := req.Msg.SessionId
+	userToken := req.Msg.UserToken
+
+	if userToken == "" {
+		return nil, status.Error(codes.InvalidArgument, "User token is required")
+	}
+
+	parsedToken, err := ar.tokenRepository.ParseAccessToken(userToken)
+
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "Invalid user token")
+	}
+
+	if !ar.streamStore.CheckSessionOwner(sessionID, parsedToken.UserID) {
+		return nil, status.Error(codes.PermissionDenied, "You do not have permission to send messages to this session")
+	}
 
 	if message == "" {
 		return nil, status.Error(codes.InvalidArgument, "Message is required")
