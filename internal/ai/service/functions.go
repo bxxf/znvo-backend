@@ -32,7 +32,7 @@ var AvailableTools = []llms.Tool{
 								},
 								"duration": map[string]any{
 									"type":        "string",
-									"description": "Duration of the activity as a string (e.g., '30 minutes', '1 hour'). Can be empty if the user doesn't know the duration.",
+									"description": "Duration of the activity as a string (e.g., '30 minutes', '1 hour'). Can be empty if the user doesn't know the duration. DO NOT GUESS the duration - if the user doesn't know, it's better to leave it empty",
 								},
 								"time": map[string]any{
 									"type":        "number",
@@ -40,7 +40,7 @@ var AvailableTools = []llms.Tool{
 								},
 								"mood": map[string]any{
 									"type":        "string",
-									"description": "Mood level of the user during the activity (0-100) - can be on a scale 1-10 (times ten)",
+									"description": "Mood level of the user during the activity (0-100) - can be on a scale 1-10 (times ten). If the user doesn't know the mood, it can be empty. DO NOT GUESS.",
 								},
 							},
 							"required": []string{"name", "mood", "time"},
