@@ -15,6 +15,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
+	"github.com/bxxf/znvo-backend/internal/monitoring"
 	"github.com/bxxf/znvo-backend/internal/redis"
 	"github.com/bxxf/znvo-backend/internal/server"
 )
@@ -34,6 +35,7 @@ func main() {
 			chat.NewChatService,
 			server.NewServer,
 			token.NewTokenRepository,
+			monitoring.NewMonitoringService,
 		),
 		fx.Invoke(
 			func(s *server.Server) {

@@ -74,7 +74,7 @@ func (ar *AiRouter) StartSession(
 
 	for {
 		select {
-		case <-ctx.Done(): // Check if the context is done/cancelled
+		case <-ctx.Done():
 			fmt.Println("Stream context cancelled, closing stream")
 			ar.aiService.CloseSession(resp.SessionID)
 			ar.streamStore.CloseSession(resp.SessionID)
