@@ -13,7 +13,7 @@ type StreamStore struct {
 	streams    map[string]*connect.ServerStream[aiv1.StartSessionResponse]
 	mu         sync.Mutex
 	msgChan    map[string]chan *aiv1.StartSessionResponse
-	sessionMap map[string]string // Maps sessionID to userID
+	sessionMap map[string]string
 }
 
 func NewStreamStore() *StreamStore {
