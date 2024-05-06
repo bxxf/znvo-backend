@@ -23,9 +23,10 @@ type StreamStore struct {
 
 func NewStreamStore() *StreamStore {
 	return &StreamStore{
-		streams:    make(map[string]*connect.ServerStream[aiv1.StartSessionResponse]),
-		msgChan:    make(map[string]chan *aiv1.StartSessionResponse),
-		sessionMap: make(map[string]string),
+		streams:      make(map[string]*connect.ServerStream[aiv1.StartSessionResponse]),
+		msgChan:      make(map[string]chan *aiv1.StartSessionResponse),
+		sessionMap:   make(map[string]string),
+		sessionState: make(map[string]*SessionState),
 	}
 }
 
