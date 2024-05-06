@@ -9,11 +9,16 @@ import (
 	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
 )
 
+type SessionState struct {
+	HasCalledParseActivities bool
+}
+
 type StreamStore struct {
-	streams    map[string]*connect.ServerStream[aiv1.StartSessionResponse]
-	mu         sync.Mutex
-	msgChan    map[string]chan *aiv1.StartSessionResponse
-	sessionMap map[string]string
+	streams      map[string]*connect.ServerStream[aiv1.StartSessionResponse]
+	mu           sync.Mutex
+	msgChan      map[string]chan *aiv1.StartSessionResponse
+	sessionMap   map[string]string
+	sessionState map[string]*SessionState
 }
 
 func NewStreamStore() *StreamStore {
@@ -30,6 +35,7 @@ func (s *StreamStore) SaveStream(sessionID string, stream *connect.ServerStream[
 	s.streams[sessionID] = stream
 	s.msgChan[sessionID] = make(chan *aiv1.StartSessionResponse, 10)
 	s.sessionMap[sessionID] = userID
+	s.sessionState[sessionID] = &SessionState{}
 	go s.handleStream(sessionID)
 }
 

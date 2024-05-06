@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/tmc/langchaingo/llms"
@@ -39,7 +40,7 @@ var AvailableTools = []llms.Tool{
 									"description": "How long AGO the activity took place in MINUTES (e.g., 5, 10, 15, 120). Can be empty or 0 if the user doesn't know the time OR if it's happening now - 0 means the activity is happening now. If the activity is happening now, the time should be 0 + duration of the activity in minutes.",
 								},
 								"mood": map[string]any{
-									"type":        "string",
+									"type":        "number",
 									"description": "Mood level of the user during the activity (0-100) - can be on a scale 1-10 (times ten). If the user doesn't know the mood, it can be empty. DO NOT GUESS.",
 								},
 							},
@@ -97,6 +98,19 @@ func (s *AiService) handleParseActivities(args string, streamID string, messageI
 	if err := json.Unmarshal([]byte(args), &activities); err != nil {
 		return err
 	}
+
+	state, exists := s.streamStore.sessionState[streamID]
+	s.streamStore.mu.Unlock()
+	if !exists {
+		return fmt.Errorf("session state not found")
+	}
+
+	if state.HasCalledParseActivities {
+		s.logger.Info("parseActivities has already been called for this session: ", streamID)
+		return nil
+	}
+
+	state.HasCalledParseActivities = true
 
 	for i, activity := range activities.Activities {
 		currentTime := time.Now()
