@@ -12,6 +12,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	"github.com/bxxf/znvo-backend/internal/auth/model"
+	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/redis"
@@ -23,10 +24,11 @@ type AuthService struct {
 	logger           *logger.LoggerInstance
 	webAuthnInstance *webauthn.WebAuthn
 	redisService     *redis.RedisService
+	database         *database.Database
 }
 
 // NewAuthService creates a new AuthService instance with the provided logger and configuration.
-func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig, redisService *redis.RedisService) *AuthService {
+func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig, redisService *redis.RedisService, db *database.Database) *AuthService {
 	webAuthn, err := NewWebAuthnClient(logger, cfg)
 	if err != nil {
 		logger.Error("Failed to create WebAuthn object", "error", err)
@@ -36,6 +38,7 @@ func NewAuthService(logger *logger.LoggerInstance, cfg *envconfig.EnvConfig, red
 		logger:           logger,
 		webAuthnInstance: webAuthn,
 		redisService:     redisService,
+		database:         db,
 	}
 }
 
@@ -54,7 +57,7 @@ func (as *AuthService) InitializeRegister(uuid string) (*webauthn.SessionData, *
 
 // FinishRegister completes the user registration process using the provided session data and response body.
 // It returns the newly created user credential on success.
-func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID string, resBody map[string]interface{}) (*webauthn.Credential, error) {
+func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID string, publicKey string, resBody map[string]interface{}) (*webauthn.Credential, error) {
 	session.Challenge = base64.RawStdEncoding.EncodeToString([]byte(session.Challenge))
 
 	user := model.NewWebAuthnUser([]byte(userID), userID)
@@ -87,6 +90,10 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID stri
 	go func() {
 		redisClient := as.redisService.GetClient()
 		_, err = redisClient.Set(redisClient.Context(), "cred:"+userID, string(credJson), 0).Result()
+		err = as.database.InsertUser(userID, publicKey)
+		if err != nil {
+			as.logger.Error("failed to insert user into database", "error", err)
+		}
 
 	}()
 

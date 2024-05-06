@@ -35,6 +35,7 @@ message FinishRegisterRequest {
   string credid = 3;
   string clientdata = 4;
   string attestation = 5;
+  string dataPublicKey = 6;
 }
 
 // Response to finish a registration - contains the JWT token

@@ -6,7 +6,7 @@ import (
 )
 
 // ENV_VALUES - list of environment variables that must be defined
-var ENV_VALUES = []string{"PORT", "JWT_SECRET", "REDIS_URL", "GCP_CREDENTIALS", "SENTRY_DSN"}
+var ENV_VALUES = []string{"PORT", "JWT_SECRET", "REDIS_URL", "GCP_CREDENTIALS", "SENTRY_DSN", "TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"}
 
 type EnvConfig struct {
 	Port           string
@@ -15,6 +15,8 @@ type EnvConfig struct {
 	RedisURL       string
 	GCPCredentials string
 	SentryDSN      string
+	TursoURL       string
+	TursoToken     string
 }
 
 func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
@@ -32,5 +34,7 @@ func NewEnvConfig(logger *logger.LoggerInstance) *EnvConfig {
 		RedisURL:       values["REDIS_URL"],
 		GCPCredentials: values["GCP_CREDENTIALS"],
 		SentryDSN:      values["SENTRY_DSN"],
+		TursoURL:       values["TURSO_DATABASE_URL"],
+		TursoToken:     values["TURSO_AUTH_TOKEN"],
 	}
 }

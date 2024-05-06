@@ -13,6 +13,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/service"
 	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
+	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/monitoring"
@@ -36,6 +37,7 @@ func main() {
 			server.NewServer,
 			token.NewTokenRepository,
 			monitoring.NewMonitoringService,
+			database.NewDatabase,
 		),
 		fx.Invoke(
 			func(s *server.Server) {

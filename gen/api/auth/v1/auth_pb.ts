@@ -119,6 +119,11 @@ export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
    */
   attestation = "";
 
+  /**
+   * @generated from field: string dataPublicKey = 6;
+   */
+  dataPublicKey = "";
+
   constructor(data?: PartialMessage<FinishRegisterRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -132,6 +137,7 @@ export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
     { no: 3, name: "credid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "clientdata", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "attestation", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "dataPublicKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishRegisterRequest {

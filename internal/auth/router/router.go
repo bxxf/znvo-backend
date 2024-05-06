@@ -88,6 +88,11 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	// Usingchannels to get session data concurrently
 	sessionDataChan := make(chan *webauthn.SessionData, 1)
 	errChan := make(chan error, 1)
+	publicKey := req.Msg.DataPublickey
+
+	if publicKey == "" {
+		return nil, status.New(codes.InvalidArgument, "public key is required").Err()
+	}
 
 	go func() {
 		sessionData, err := ar.sessionRepository.GetSession(req.Msg.GetSid())
@@ -124,7 +129,7 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	}
 
 	// Check for errors
-	_, err = ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
+	_, err = ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), publicKey, *resBody)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to finish registration", *ar.logger)
 	}

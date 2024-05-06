@@ -100,7 +100,6 @@ func (s *AiService) handleParseActivities(args string, streamID string, messageI
 	}
 
 	state, exists := s.streamStore.sessionState[streamID]
-	s.streamStore.mu.Unlock()
 	if !exists {
 		return fmt.Errorf("session state not found")
 	}
