@@ -164,5 +164,5 @@ type Activity struct {
 	Name     string `json:"name"`
 	Duration string `json:"duration"`
 	Time     int    `json:"time"`
-	Mood     string `json:"mood"`
+	Mood     int    `json:"mood"`
 }
