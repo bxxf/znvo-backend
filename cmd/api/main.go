@@ -13,6 +13,8 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/service"
 	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
+	dataRouter "github.com/bxxf/znvo-backend/internal/data/router"
+	dataService "github.com/bxxf/znvo-backend/internal/data/service"
 	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -29,15 +31,18 @@ func main() {
 			redis.NewRedisService,
 			service.NewAuthService,
 			session.NewSessionRepository,
+			database.NewDatabase,
+
 			aiService.NewStreamStore,
 			authRouter.NewAuthRouter,
 			aiService.NewAiService,
 			aiRouter.NewAiRouter,
+			dataService.NewDataService,
+			dataRouter.NewDataRouter,
 			chat.NewChatService,
 			server.NewServer,
 			token.NewTokenRepository,
 			monitoring.NewMonitoringService,
-			database.NewDatabase,
 		),
 		fx.Invoke(
 			func(s *server.Server) {

@@ -88,7 +88,7 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	// Usingchannels to get session data concurrently
 	sessionDataChan := make(chan *webauthn.SessionData, 1)
 	errChan := make(chan error, 1)
-	publicKey := req.Msg.DataPublickey
+	publicKey := req.Msg.DataPublicKey
 
 	if publicKey == "" {
 		return nil, status.New(codes.InvalidArgument, "public key is required").Err()

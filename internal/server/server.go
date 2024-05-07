@@ -12,6 +12,7 @@ import (
 
 	aiRouter "github.com/bxxf/znvo-backend/internal/ai/router"
 	authRouter "github.com/bxxf/znvo-backend/internal/auth/router"
+	dataRouter "github.com/bxxf/znvo-backend/internal/data/router"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
@@ -19,14 +20,17 @@ import (
 type Server struct {
 	authRouter *authRouter.AuthRouter
 	aiRouter   *aiRouter.AiRouter
-	logger     *logger.LoggerInstance
-	config     *envconfig.EnvConfig
+	dataRouter *dataRouter.DataRouter
+
+	logger *logger.LoggerInstance
+	config *envconfig.EnvConfig
 }
 
-func NewServer(authRouter *authRouter.AuthRouter, aiRouter *aiRouter.AiRouter, logger *logger.LoggerInstance, config *envconfig.EnvConfig, lc fx.Lifecycle) *Server {
+func NewServer(authRouter *authRouter.AuthRouter, aiRouter *aiRouter.AiRouter, logger *logger.LoggerInstance, config *envconfig.EnvConfig, dataRouter *dataRouter.DataRouter, lc fx.Lifecycle) *Server {
 	server := &Server{
 		authRouter: authRouter,
 		aiRouter:   aiRouter,
+		dataRouter: dataRouter,
 		logger:     logger,
 		config:     config,
 	}
