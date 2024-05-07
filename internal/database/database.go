@@ -72,11 +72,21 @@ func (d *Database) GetSharedData(ctx context.Context, userId string) ([]*datav1.
 
 	var results []*datav1.SharedDataItem
 	for rows.Next() {
-		var item datav1.SharedDataItem
-		if err := rows.Scan(&item.SenderId, &item.Data, &item.CreatedAt); err != nil {
+		type sharedDataItem struct {
+			SenderId   string
+			Data       string
+			CreatedAt  int64
+			ReceiverId string
+		}
+		var item sharedDataItem
+		if err := rows.Scan(&item.SenderId, &item.ReceiverId, &item.Data, &item.CreatedAt); err != nil {
 			return nil, err
 		}
-		results = append(results, &item)
+		results = append(results, &datav1.SharedDataItem{
+			SenderId:  item.SenderId,
+			Data:      item.Data,
+			CreatedAt: item.CreatedAt,
+		})
 	}
 	return results, rows.Err()
 }

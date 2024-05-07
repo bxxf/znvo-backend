@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	datav1 "github.com/bxxf/znvo-backend/gen/api/data/v1"
 	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -19,7 +21,7 @@ func NewDataService(logger *logger.LoggerInstance, database *database.Database) 
 }
 
 func (s *DataService) ShareData(data string, sender string, receiver string) error {
-	err := s.database.UploadSharedData(sender, receiver, data)
+	err := s.database.UploadSharedData(context.Background(), sender, receiver, data)
 	if err != nil {
 		s.logger.Error("could not upload data: %v", err)
 	}
@@ -27,7 +29,7 @@ func (s *DataService) ShareData(data string, sender string, receiver string) err
 }
 
 func (s *DataService) GetSharedData(userId string) []*datav1.SharedDataItem {
-	data, err := s.database.GetSharedData(userId)
+	data, err := s.database.GetSharedData(context.Background(), userId)
 	if err != nil {
 		s.logger.Error("could not get shared data: %v", err)
 	}

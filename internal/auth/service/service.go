@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -90,7 +91,7 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID stri
 	go func() {
 		redisClient := as.redisService.GetClient()
 		_, err = redisClient.Set(redisClient.Context(), "cred:"+userID, string(credJson), 0).Result()
-		err = as.database.InsertUser(userID, publicKey)
+		err = as.database.InsertUser(context.Background(), userID, publicKey)
 		if err != nil {
 			as.logger.Error("failed to insert user into database", "error", err)
 		}
