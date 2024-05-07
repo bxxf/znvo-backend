@@ -8,7 +8,7 @@
 //The data service is responsible for handling the requests for getting/sharing data with the user.
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 
 /**
  * GetSharedDataRequest is the request for getting the shared data.
@@ -52,6 +52,61 @@ export class GetSharedDataRequest extends Message<GetSharedDataRequest> {
 }
 
 /**
+ * @generated from message data.v1.SharedDataItem
+ */
+export class SharedDataItem extends Message<SharedDataItem> {
+  /**
+   * The unique identifier of the sender.
+   *
+   * @generated from field: string senderId = 1;
+   */
+  senderId = "";
+
+  /**
+   * The actual data shared.
+   *
+   * @generated from field: string data = 2;
+   */
+  data = "";
+
+  /**
+   * Timestamp when the data was created, in milliseconds since the epoch.
+   *
+   * @generated from field: int64 createdAt = 3;
+   */
+  createdAt = protoInt64.zero;
+
+  constructor(data?: PartialMessage<SharedDataItem>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "data.v1.SharedDataItem";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "senderId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "data", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "createdAt", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SharedDataItem {
+    return new SharedDataItem().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SharedDataItem {
+    return new SharedDataItem().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SharedDataItem {
+    return new SharedDataItem().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SharedDataItem | PlainMessage<SharedDataItem> | undefined, b: SharedDataItem | PlainMessage<SharedDataItem> | undefined): boolean {
+    return proto3.util.equals(SharedDataItem, a, b);
+  }
+}
+
+/**
  * GetSharedDataResponse is the response for getting the shared data.
  *
  * @generated from message data.v1.GetSharedDataResponse
@@ -60,9 +115,9 @@ export class GetSharedDataResponse extends Message<GetSharedDataResponse> {
   /**
    * The shared data.
    *
-   * @generated from field: string data = 1;
+   * @generated from field: repeated data.v1.SharedDataItem shared_data = 1;
    */
-  data = "";
+  sharedData: SharedDataItem[] = [];
 
   constructor(data?: PartialMessage<GetSharedDataResponse>) {
     super();
@@ -72,7 +127,7 @@ export class GetSharedDataResponse extends Message<GetSharedDataResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "data.v1.GetSharedDataResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "data", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "shared_data", kind: "message", T: SharedDataItem, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSharedDataResponse {

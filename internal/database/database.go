@@ -1,13 +1,13 @@
 package database
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"database/sql"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -16,169 +16,106 @@ import (
 
 	"github.com/tursodatabase/go-libsql"
 
+	datav1 "github.com/bxxf/znvo-backend/gen/api/data/v1"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 )
 
 type Database struct {
 	config *envconfig.EnvConfig
+	db     *sql.DB
 }
 
-// NewDatabase creates a new instance of Database with the given configuration.
-func NewDatabase(config *envconfig.EnvConfig) *Database {
+func NewDatabase(config *envconfig.EnvConfig) (*Database, error) {
 	if config == nil {
-		fmt.Println("Database configuration is nil")
-		return nil
-	}
-	return &Database{config: config}
-}
-
-// openDB opens a new database connection using the configuration stored in the Database struct.
-func (d *Database) openDB() (*sql.DB, error) {
-	if d == nil {
-		return nil, fmt.Errorf("Database instance is nil")
+		return nil, errors.New("database configuration is nil")
 	}
 
-	dbPath := d.getDbPath()
-	if dbPath == "" {
-		return nil, fmt.Errorf("failed to get or create database path")
-	}
-
+	dbPath := getDbPath()
 	syncInterval := 5 * time.Minute
-	connector, err := libsql.NewEmbeddedReplicaConnector(dbPath, d.config.TursoURL,
-		libsql.WithAuthToken(d.config.TursoToken),
+	connector, err := libsql.NewEmbeddedReplicaConnector(dbPath, config.TursoURL,
+		libsql.WithAuthToken(config.TursoToken),
 		libsql.WithSyncInterval(syncInterval),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating connector: %v", err)
 	}
 
-	dbConn := sql.OpenDB(connector)
-	if dbConn == nil {
-		return nil, fmt.Errorf("failed to open database connection")
-	}
-
-	return dbConn, nil
+	db := sql.OpenDB(connector)
+	return &Database{config: config, db: db}, nil
 }
 
-func (d *Database) GetPublicKey(userId string) (string, error) {
-	db, err := d.openDB()
+func (d *Database) Close() error {
+	return d.db.Close()
+}
+
+func (d *Database) InsertUser(ctx context.Context, userId, publicKey string) error {
+	_, err := d.db.ExecContext(ctx, "INSERT INTO users (id, publickey) VALUES (?, ?)", userId, publicKey)
+	return err
+}
+
+func (d *Database) UploadSharedData(ctx context.Context, sender, receiver, data string) error {
+	encryptedData, err := d.encryptDataForUser(ctx, receiver, data)
+	if err != nil {
+		return err
+	}
+	createdAt := time.Now().Unix()
+	_, err = d.db.ExecContext(ctx, "INSERT INTO shared_data (user_id, receiver_id, data, created_at) VALUES (?, ?, ?, ?)", sender, receiver, encryptedData, createdAt)
+	return err
+}
+
+func (d *Database) GetSharedData(ctx context.Context, userId string) ([]*datav1.SharedDataItem, error) {
+	rows, err := d.db.QueryContext(ctx, "SELECT user_id, receiver_id, data, created_at FROM shared_data WHERE receiver_id = ?", userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []*datav1.SharedDataItem
+	for rows.Next() {
+		var item datav1.SharedDataItem
+		if err := rows.Scan(&item.SenderId, &item.Data, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		results = append(results, &item)
+	}
+	return results, rows.Err()
+}
+
+func (d *Database) encryptDataForUser(ctx context.Context, userId, data string) (string, error) {
+	publicKey, err := d.GetPublicKey(ctx, userId)
 	if err != nil {
 		return "", err
 	}
-	defer db.Close()
+	return encryptData(publicKey, data)
+}
 
+func (d *Database) GetPublicKey(ctx context.Context, userId string) (string, error) {
 	var publicKey string
-	err = db.QueryRow("SELECT publickey FROM users WHERE id = ?", userId).Scan(&publicKey)
+	err := d.db.QueryRowContext(ctx, "SELECT publickey FROM users WHERE id = ?", userId).Scan(&publicKey)
 	return publicKey, err
 }
 
-func (d *Database) InsertUser(userId, publicKey string) error {
-	db, err := d.openDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	_, err = db.Exec("INSERT INTO users (id, publickey) VALUES (?, ?)", userId, publicKey)
-	return err
-}
-
-func (d *Database) UploadSharedData(sender, receiver, data string) error {
-	db, err := d.openDB()
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	encryptedData, err := d.encryptDataForUser(receiver, data)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec("INSERT INTO shared_data (user_id, receiver_id, data) VALUES (?, ?, ?)", sender, receiver, encryptedData)
-	return err
-}
-
-func (d *Database) GetSharedData(userId string) (string, error) {
-	db, err := d.openDB()
-	if err != nil {
-		return "", err
-	}
-	defer db.Close()
-
-	var encryptedData string
-	err = db.QueryRow("SELECT data FROM shared_data WHERE receiver_id = ?", userId).Scan(&encryptedData)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "[]", nil
-		}
-
-		return "", err
-	}
-
-	fmt.Printf("Encrypted data: %s\n", encryptedData)
-	return encryptedData, err
-}
-
-func (d *Database) encryptDataForUser(userId, data string) (string, error) {
-	pkey, err := d.GetPublicKey(userId)
-	if err != nil {
-		return "", err
-	}
-	return encryptData(pkey, data)
-}
-
 func encryptData(publicKeySpki string, data string) (string, error) {
-	// Decode the base64-encoded public key
 	publicKeyBytes, err := base64.StdEncoding.DecodeString(publicKeySpki)
 	if err != nil {
 		return "", err
 	}
-
-	// Parse the public key
 	pub, err := x509.ParsePKIXPublicKey(publicKeyBytes)
 	if err != nil {
 		return "", err
 	}
-
 	rsaPub, ok := pub.(*rsa.PublicKey)
 	if !ok {
 		return "", errors.New("public key type assertion to RSA public key failed")
 	}
-
-	// Encrypt the data using RSA-OAEP with SHA-256
-	hash := sha256.New()
-	ciphertext, err := rsa.EncryptOAEP(hash, rand.Reader, rsaPub, []byte(data), nil)
+	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPub, []byte(data), nil)
 	if err != nil {
 		return "", err
 	}
-
-	// Encode the encrypted data to base64
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
-func base64ToPEM(base64Key string) (string, error) {
-	// Decode the base64 string to bytes
-	derBytes, err := base64.StdEncoding.DecodeString(base64Key)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode base64 string: %v", err)
-	}
 
-	// Construct a pem.Block struct for the public key
-	pemBlock := &pem.Block{
-		Type:  "PUBLIC KEY", // Type of the public key to be included in the PEM header
-		Bytes: derBytes,
-	}
-
-	// Encode the DER bytes into a PEM format
-	pemBytes := pem.EncodeToMemory(pemBlock)
-	if pemBytes == nil {
-		return "", fmt.Errorf("failed to encode PEM data")
-	}
-
-	return string(pemBytes), nil
-}
-
-func (d *Database) getDbPath() string {
+func getDbPath() string {
 	dir, err := os.MkdirTemp("", "libsql-*")
 	if err != nil {
 		fmt.Println("Error creating temporary directory:", err)

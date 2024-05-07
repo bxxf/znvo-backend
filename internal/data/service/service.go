@@ -1,6 +1,7 @@
 package service
 
 import (
+	datav1 "github.com/bxxf/znvo-backend/gen/api/data/v1"
 	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
@@ -25,10 +26,11 @@ func (s *DataService) ShareData(data string, sender string, receiver string) err
 	return err
 }
 
-func (s *DataService) GetSharedData(userId string) string {
+func (s *DataService) GetSharedData(userId string) []*datav1.SharedDataItem {
 	data, err := s.database.GetSharedData(userId)
 	if err != nil {
 		s.logger.Error("could not get shared data: %v", err)
 	}
+
 	return data
 }

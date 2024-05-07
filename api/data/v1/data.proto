@@ -9,7 +9,6 @@ package data.v1;
 option go_package = "github.com/bxxf/znvo-backend/gen/api/data/v1;data";
 
 
-
 // The Data service is responsible for handling the requests for getting/sharing data with the user.
 service DataService {
     // GetSharedData returns the shared data for the user.
@@ -24,10 +23,16 @@ message GetSharedDataRequest {
     string user_token = 1;
 }
 
+message SharedDataItem {
+    string senderId = 1;    // The unique identifier of the sender.
+    string data = 2;        // The actual data shared.
+    int64 createdAt = 3;    // Timestamp when the data was created, in milliseconds since the epoch.
+  }
+  
 // GetSharedDataResponse is the response for getting the shared data.
 message GetSharedDataResponse {
     // The shared data.
-    string data = 1;
+    repeated SharedDataItem shared_data = 1;
 }
 
 // ShareDataRequest is the request for sharing the user data.

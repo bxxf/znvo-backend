@@ -81,14 +81,9 @@ func (dr *DataRouter) GetSharedData(ctx context.Context, req *connect.Request[da
 	}
 
 	data := dr.dataService.GetSharedData(parsedToken.UserID)
-
-	if data == "" {
-		return nil, status.Error(codes.NotFound, "No shared data found")
-	}
-
 	return &connect.Response[datav1.GetSharedDataResponse]{
 		Msg: &datav1.GetSharedDataResponse{
-			Data: data,
+			SharedData: data,
 		},
 	}, nil
 }
