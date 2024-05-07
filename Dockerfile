@@ -1,4 +1,4 @@
-FROM golang:1.22 as builder
+FROM golang:1.22-alpine as builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -a -tags netgo -installsuffix cgo -ldflags '-w -extldflags "-static"' -o myapp ./cmd/api/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -a -tags netgo -installsuffix cgo -ldflags '-w -extldflags "-static"' -o znvo-backend ./cmd/api/main.go
 
 FROM debian:buster
 
@@ -18,8 +18,8 @@ RUN apt-get update && apt-get install -y sqlite3 libsqlite3-dev && rm -rf /var/l
 
 WORKDIR /root/
 
-COPY --from=builder /app/myapp .
+COPY --from=builder /app/znvo-backend .
 
 EXPOSE 40000
 
-CMD ["./myapp"]
+CMD ["./znvo-backend"]
