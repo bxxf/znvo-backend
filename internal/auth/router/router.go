@@ -7,8 +7,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/nrednav/cuid2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -53,8 +53,17 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Request[authv1.InitializeRegisterRequest]) (*connect.Response[authv1.InitializeRegisterResponse], error) {
 
+	// cuid generator
+	generate, err := cuid2.Init(
+		cuid2.WithLength(10),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate random user ID
-	userID := uuid.New().String()
+	userID := generate()
+	// TODO: Check if user already exists in the database
 	ar.logger.Debug("Initializing registration for user " + userID)
 
 	// Initialize registration process thru webauthn
