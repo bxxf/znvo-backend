@@ -20,12 +20,12 @@ func NewDataService(logger *logger.LoggerInstance, database *database.Database) 
 	}
 }
 
-func (s *DataService) ShareData(data string, sender string, receiver string) error {
-	err := s.database.UploadSharedData(context.Background(), sender, receiver, data)
+func (s *DataService) ShareData(data string, sender string, receiver string) (string, string, error) {
+	encryptedData, key, err := s.database.UploadSharedData(context.Background(), sender, receiver, data)
 	if err != nil {
 		s.logger.Error("could not upload data: %v", err)
 	}
-	return err
+	return encryptedData, key, err
 }
 
 func (s *DataService) GetSharedData(userId string) []*datav1.SharedDataItem {

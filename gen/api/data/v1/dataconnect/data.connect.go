@@ -53,7 +53,7 @@ var (
 // DataServiceClient is a client for the data.v1.DataService service.
 type DataServiceClient interface {
 	// GetSharedData returns the shared data for the user.
-	GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest]) (*connect.Response[v1.GetSharedDataResponse], error)
+	GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest]) (*connect.ServerStreamForClient[v1.GetSharedDataResponse], error)
 	// ShareUserData shares the user data with the user.
 	ShareUserData(context.Context, *connect.Request[v1.ShareDataRequest]) (*connect.Response[v1.ShareDataResponse], error)
 }
@@ -90,8 +90,8 @@ type dataServiceClient struct {
 }
 
 // GetSharedData calls data.v1.DataService.GetSharedData.
-func (c *dataServiceClient) GetSharedData(ctx context.Context, req *connect.Request[v1.GetSharedDataRequest]) (*connect.Response[v1.GetSharedDataResponse], error) {
-	return c.getSharedData.CallUnary(ctx, req)
+func (c *dataServiceClient) GetSharedData(ctx context.Context, req *connect.Request[v1.GetSharedDataRequest]) (*connect.ServerStreamForClient[v1.GetSharedDataResponse], error) {
+	return c.getSharedData.CallServerStream(ctx, req)
 }
 
 // ShareUserData calls data.v1.DataService.ShareUserData.
@@ -102,7 +102,7 @@ func (c *dataServiceClient) ShareUserData(ctx context.Context, req *connect.Requ
 // DataServiceHandler is an implementation of the data.v1.DataService service.
 type DataServiceHandler interface {
 	// GetSharedData returns the shared data for the user.
-	GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest]) (*connect.Response[v1.GetSharedDataResponse], error)
+	GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest], *connect.ServerStream[v1.GetSharedDataResponse]) error
 	// ShareUserData shares the user data with the user.
 	ShareUserData(context.Context, *connect.Request[v1.ShareDataRequest]) (*connect.Response[v1.ShareDataResponse], error)
 }
@@ -113,7 +113,7 @@ type DataServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewDataServiceHandler(svc DataServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	dataServiceGetSharedDataHandler := connect.NewUnaryHandler(
+	dataServiceGetSharedDataHandler := connect.NewServerStreamHandler(
 		DataServiceGetSharedDataProcedure,
 		svc.GetSharedData,
 		connect.WithSchema(dataServiceGetSharedDataMethodDescriptor),
@@ -140,8 +140,8 @@ func NewDataServiceHandler(svc DataServiceHandler, opts ...connect.HandlerOption
 // UnimplementedDataServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedDataServiceHandler struct{}
 
-func (UnimplementedDataServiceHandler) GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest]) (*connect.Response[v1.GetSharedDataResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("data.v1.DataService.GetSharedData is not implemented"))
+func (UnimplementedDataServiceHandler) GetSharedData(context.Context, *connect.Request[v1.GetSharedDataRequest], *connect.ServerStream[v1.GetSharedDataResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("data.v1.DataService.GetSharedData is not implemented"))
 }
 
 func (UnimplementedDataServiceHandler) ShareUserData(context.Context, *connect.Request[v1.ShareDataRequest]) (*connect.Response[v1.ShareDataResponse], error) {

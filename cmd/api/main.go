@@ -15,6 +15,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	dataRouter "github.com/bxxf/znvo-backend/internal/data/router"
 	dataService "github.com/bxxf/znvo-backend/internal/data/service"
+	"github.com/bxxf/znvo-backend/internal/data/stream"
 	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/envconfig"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -32,7 +33,7 @@ func main() {
 			service.NewAuthService,
 			session.NewSessionRepository,
 			database.NewDatabase,
-
+			stream.NewStreamStore,
 			aiService.NewStreamStore,
 			authRouter.NewAuthRouter,
 			aiService.NewAiService,

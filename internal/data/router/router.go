@@ -2,6 +2,8 @@ package router
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/grpc/codes"
@@ -10,6 +12,7 @@ import (
 	datav1 "github.com/bxxf/znvo-backend/gen/api/data/v1"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/data/service"
+	"github.com/bxxf/znvo-backend/internal/data/stream"
 	"github.com/bxxf/znvo-backend/internal/logger"
 )
 
@@ -21,13 +24,15 @@ type DataRouter struct {
 	logger          *logger.LoggerInstance
 	dataService     *service.DataService
 	tokenRepository *token.TokenRepository
+	streamStore     *stream.StreamStore
 }
 
-func NewDataRouter(logger *logger.LoggerInstance, service *service.DataService, tokenRepository *token.TokenRepository) *DataRouter {
+func NewDataRouter(logger *logger.LoggerInstance, service *service.DataService, tokenRepository *token.TokenRepository, streamStore *stream.StreamStore) *DataRouter {
 	return &DataRouter{
 		logger:          logger,
 		dataService:     service,
 		tokenRepository: tokenRepository,
+		streamStore:     streamStore,
 	}
 }
 
@@ -54,11 +59,22 @@ func (dr *DataRouter) ShareUserData(ctx context.Context, req *connect.Request[da
 		return nil, status.Error(codes.InvalidArgument, "Data is required")
 	}
 
-	err = dr.dataService.ShareData(data, parsedToken.UserID, receiver)
+	key, err := dr.dataService.ShareData(data, parsedToken.UserID, receiver)
 
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to share data")
 	}
+
+	dr.streamStore.SendMessage(receiver, &datav1.GetSharedDataResponse{
+		SharedData: []*datav1.SharedDataItem{
+			{
+				SenderId:  parsedToken.UserID,
+				CreatedAt: time.Now().Unix(),
+				Data:      data,
+				Key:       key,
+			},
+		},
+	})
 
 	return &connect.Response[datav1.ShareDataResponse]{
 		Msg: &datav1.ShareDataResponse{
@@ -67,23 +83,40 @@ func (dr *DataRouter) ShareUserData(ctx context.Context, req *connect.Request[da
 	}, nil
 }
 
-func (dr *DataRouter) GetSharedData(ctx context.Context, req *connect.Request[datav1.GetSharedDataRequest]) (*connect.Response[datav1.GetSharedDataResponse], error) {
+func (dr *DataRouter) GetSharedData(ctx context.Context, req *connect.Request[datav1.GetSharedDataRequest], stream *connect.ServerStream[datav1.GetSharedDataResponse]) error {
 	userToken := req.Msg.UserToken
 
 	if userToken == "" {
-		return nil, status.Error(codes.InvalidArgument, "User token is required")
+		return status.Error(codes.InvalidArgument, "User token is required")
 	}
 
 	parsedToken, err := dr.tokenRepository.ParseAccessToken(userToken)
 
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "Invalid user token")
+		return status.Error(codes.Unauthenticated, "Invalid user token")
 	}
 
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
 	data := dr.dataService.GetSharedData(parsedToken.UserID)
-	return &connect.Response[datav1.GetSharedDataResponse]{
-		Msg: &datav1.GetSharedDataResponse{
-			SharedData: data,
-		},
-	}, nil
+
+	stream.Send(&datav1.GetSharedDataResponse{
+		SharedData: data,
+	})
+
+	dr.streamStore.SaveStream(stream, parsedToken.UserID)
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Stream context cancelled, closing stream")
+			return ctx.Err()
+		default:
+			time.Sleep(time.Minute * 1)
+
+		}
+	}
+
+	return nil
 }

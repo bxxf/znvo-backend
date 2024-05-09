@@ -27,7 +27,7 @@ export const DataService = {
       name: "GetSharedData",
       I: GetSharedDataRequest,
       O: GetSharedDataResponse,
-      kind: MethodKind.Unary,
+      kind: MethodKind.ServerStreaming,
     },
     /**
      * ShareUserData shares the user data with the user.

@@ -76,6 +76,13 @@ export class SharedDataItem extends Message<SharedDataItem> {
    */
   createdAt = protoInt64.zero;
 
+  /**
+   * The key of the data.
+   *
+   * @generated from field: string key = 4;
+   */
+  key = "";
+
   constructor(data?: PartialMessage<SharedDataItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -87,6 +94,7 @@ export class SharedDataItem extends Message<SharedDataItem> {
     { no: 1, name: "senderId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "data", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "createdAt", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SharedDataItem {

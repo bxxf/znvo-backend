@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/google/uuid"
+	"github.com/nrednav/cuid2"
 
 	"github.com/bxxf/znvo-backend/internal/logger"
 	rds "github.com/bxxf/znvo-backend/internal/redis"
@@ -29,7 +29,7 @@ func NewSessionRepository(redisRepo *rds.RedisService, logger *logger.LoggerInst
 
 func (r *SessionRepository) NewSession(data *webauthn.SessionData) (string, error) {
 
-	id := prefix + uuid.New().String()
+	id := prefix + cuid2.Generate()
 
 	// transform session data to JSON
 	dataJSON, err := json.Marshal(data)

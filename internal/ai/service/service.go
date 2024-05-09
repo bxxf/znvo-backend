@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/nrednav/cuid2"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
@@ -105,14 +105,14 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 
 // generateUniqueSessionID generates a unique session ID
 func (s *AiService) generateUniqueSessionID() string {
-	sessionID := uuid.New().String()
+	sessionID := cuid2.Generate()
 	for {
 		_, found := s.streamStore.GetStream(sessionID)
 		if !found {
 			break
 		}
 		s.logger.Error("Stream already exists")
-		sessionID = uuid.New().String()
+		sessionID = cuid2.Generate()
 	}
 	return sessionID
 }
@@ -144,7 +144,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	msgHistory := *messageHistoryPointer
 	msgHistory = append(msgHistory, msg)
 
-	messageId := uuid.New().String()
+	messageId := cuid2.Generate()
 	skipStreaming := false
 
 	// Generate content based on the message history
