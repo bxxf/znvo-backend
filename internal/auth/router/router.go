@@ -18,6 +18,7 @@ import (
 	"github.com/bxxf/znvo-backend/internal/auth/session"
 	"github.com/bxxf/znvo-backend/internal/auth/token"
 	"github.com/bxxf/znvo-backend/internal/auth/util"
+	"github.com/bxxf/znvo-backend/internal/database"
 	"github.com/bxxf/znvo-backend/internal/logger"
 	"github.com/bxxf/znvo-backend/internal/utils"
 )
@@ -29,18 +30,20 @@ type AuthRouter struct {
 	authService       *service.AuthService
 	tokenRepository   *token.TokenRepository
 	sessionRepository *session.SessionRepository
+	database          *database.Database
 }
 
 type Definer interface {
 	authconnect.AuthServiceHandler
 }
 
-func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository, sessionRepository *session.SessionRepository) *AuthRouter {
+func NewAuthRouter(logger *logger.LoggerInstance, authService *service.AuthService, tokenRepository *token.TokenRepository, sessionRepository *session.SessionRepository, db *database.Database) *AuthRouter {
 	return &AuthRouter{
 		logger:            logger,
 		authService:       authService,
 		tokenRepository:   tokenRepository,
 		sessionRepository: sessionRepository,
+		database:          db,
 	}
 }
 
@@ -97,11 +100,6 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	// Usingchannels to get session data concurrently
 	sessionDataChan := make(chan *webauthn.SessionData, 1)
 	errChan := make(chan error, 1)
-	publicKey := req.Msg.DataPublicKey
-
-	if publicKey == "" {
-		return nil, status.New(codes.InvalidArgument, "public key is required").Err()
-	}
 
 	go func() {
 		sessionData, err := ar.sessionRepository.GetSession(req.Msg.GetSid())
@@ -138,7 +136,7 @@ func (ar *AuthRouter) FinishRegister(ctx context.Context, req *connect.Request[a
 	}
 
 	// Check for errors
-	_, err = ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), publicKey, *resBody)
+	_, err = ar.authService.FinishRegister(sessionData, req.Msg.GetUserid(), *resBody)
 	if err != nil {
 		return nil, utils.HandleError(err, "failed to finish registration", *ar.logger)
 	}
@@ -268,4 +266,29 @@ func (ar *AuthRouter) FinishLogin(ctx context.Context, req *connect.Request[auth
 	}
 
 	return response, nil
+}
+
+func (ar *AuthRouter) InitializeKey(ctx context.Context, req *connect.Request[authv1.InitializeKeyRequest]) (*connect.Response[authv1.InitializeKeyResponse], error) {
+	token := req.Msg.UserToken
+	publicKey := req.Msg.PublicKey
+
+	if token == "" {
+		return nil, status.New(codes.InvalidArgument, "user token is required").Err()
+	}
+
+	parsedToken, err := ar.tokenRepository.ParseAccessToken(token)
+	if err != nil {
+		return nil, status.New(codes.Unauthenticated, "invalid user token").Err()
+	}
+
+	err = ar.database.InsertUser(context.Background(), parsedToken.UserID, publicKey)
+	if err != nil {
+		ar.logger.Error("failed to insert user into database", "error", err)
+	}
+
+	return &connect.Response[authv1.InitializeKeyResponse]{
+		Msg: &authv1.InitializeKeyResponse{
+			Success: true,
+		},
+	}, nil
 }

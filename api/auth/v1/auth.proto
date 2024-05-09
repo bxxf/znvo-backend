@@ -16,6 +16,7 @@ service AuthService {
   rpc GetUser (GetUserRequest) returns (GetUserResponse) {}
   rpc InitializeLogin (InitializeLoginRequest) returns (InitializeLoginResponse) {}
   rpc FinishLogin (FinishLoginRequest) returns (FinishLoginResponse) {}
+  rpc InitializeKey (InitializeKeyRequest) returns (InitializeKeyResponse) {}
 }
 
 // Request to initialize a registration
@@ -35,7 +36,6 @@ message FinishRegisterRequest {
   string credid = 3;
   string clientdata = 4;
   string attestation = 5;
-  string dataPublicKey = 6;
 }
 
 // Response to finish a registration - contains the JWT token
@@ -77,4 +77,14 @@ message FinishLoginRequest {
 // Response to finish a login - contains the JWT token
 message FinishLoginResponse {
   string token = 1;
+}
+
+// upload public key
+message InitializeKeyRequest {
+  string user_token = 1;
+  string public_key = 2;
+}
+
+message InitializeKeyResponse {
+  bool success = 1;
 }

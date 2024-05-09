@@ -59,7 +59,7 @@ func (dr *DataRouter) ShareUserData(ctx context.Context, req *connect.Request[da
 		return nil, status.Error(codes.InvalidArgument, "Data is required")
 	}
 
-	key, err := dr.dataService.ShareData(data, parsedToken.UserID, receiver)
+	encryptedData, key, err := dr.dataService.ShareData(data, parsedToken.UserID, receiver)
 
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to share data")
@@ -70,7 +70,7 @@ func (dr *DataRouter) ShareUserData(ctx context.Context, req *connect.Request[da
 			{
 				SenderId:  parsedToken.UserID,
 				CreatedAt: time.Now().Unix(),
-				Data:      data,
+				Data:      encryptedData,
 				Key:       key,
 			},
 		},

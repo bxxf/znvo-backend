@@ -7,7 +7,7 @@
 //# Auth Service (v1)
 //This service is responsible for handling user authentication and registration.
 
-import { FinishLoginRequest, FinishLoginResponse, FinishRegisterRequest, FinishRegisterResponse, GetUserRequest, GetUserResponse, InitializeLoginRequest, InitializeLoginResponse, InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
+import { FinishLoginRequest, FinishLoginResponse, FinishRegisterRequest, FinishRegisterResponse, GetUserRequest, GetUserResponse, InitializeKeyRequest, InitializeKeyResponse, InitializeLoginRequest, InitializeLoginResponse, InitializeRegisterRequest, InitializeRegisterResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -61,6 +61,15 @@ export const AuthService = {
       name: "FinishLogin",
       I: FinishLoginRequest,
       O: FinishLoginResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc auth.v1.AuthService.InitializeKey
+     */
+    initializeKey: {
+      name: "InitializeKey",
+      I: InitializeKeyRequest,
+      O: InitializeKeyResponse,
       kind: MethodKind.Unary,
     },
   }

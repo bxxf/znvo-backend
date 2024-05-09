@@ -119,11 +119,6 @@ export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
    */
   attestation = "";
 
-  /**
-   * @generated from field: string dataPublicKey = 6;
-   */
-  dataPublicKey = "";
-
   constructor(data?: PartialMessage<FinishRegisterRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -137,7 +132,6 @@ export class FinishRegisterRequest extends Message<FinishRegisterRequest> {
     { no: 3, name: "credid", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "clientdata", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "attestation", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "dataPublicKey", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinishRegisterRequest {
@@ -463,6 +457,88 @@ export class FinishLoginResponse extends Message<FinishLoginResponse> {
 
   static equals(a: FinishLoginResponse | PlainMessage<FinishLoginResponse> | undefined, b: FinishLoginResponse | PlainMessage<FinishLoginResponse> | undefined): boolean {
     return proto3.util.equals(FinishLoginResponse, a, b);
+  }
+}
+
+/**
+ * upload public key
+ *
+ * @generated from message auth.v1.InitializeKeyRequest
+ */
+export class InitializeKeyRequest extends Message<InitializeKeyRequest> {
+  /**
+   * @generated from field: string user_token = 1;
+   */
+  userToken = "";
+
+  /**
+   * @generated from field: string public_key = 2;
+   */
+  publicKey = "";
+
+  constructor(data?: PartialMessage<InitializeKeyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.InitializeKeyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "public_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InitializeKeyRequest {
+    return new InitializeKeyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InitializeKeyRequest {
+    return new InitializeKeyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InitializeKeyRequest {
+    return new InitializeKeyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InitializeKeyRequest | PlainMessage<InitializeKeyRequest> | undefined, b: InitializeKeyRequest | PlainMessage<InitializeKeyRequest> | undefined): boolean {
+    return proto3.util.equals(InitializeKeyRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message auth.v1.InitializeKeyResponse
+ */
+export class InitializeKeyResponse extends Message<InitializeKeyResponse> {
+  /**
+   * @generated from field: bool success = 1;
+   */
+  success = false;
+
+  constructor(data?: PartialMessage<InitializeKeyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.InitializeKeyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "success", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InitializeKeyResponse {
+    return new InitializeKeyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InitializeKeyResponse {
+    return new InitializeKeyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InitializeKeyResponse {
+    return new InitializeKeyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InitializeKeyResponse | PlainMessage<InitializeKeyResponse> | undefined, b: InitializeKeyResponse | PlainMessage<InitializeKeyResponse> | undefined): boolean {
+    return proto3.util.equals(InitializeKeyResponse, a, b);
   }
 }
 
