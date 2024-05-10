@@ -48,9 +48,14 @@ export enum MessageType {
   ENDSESSION = 5,
 
   /**
-   * @generated from enum value: CHAT_PARTIAL = 6;
+   * @generated from enum value: JOURNAL = 6;
    */
-  CHAT_PARTIAL = 6,
+  JOURNAL = 6,
+
+  /**
+   * @generated from enum value: CHAT_PARTIAL = 7;
+   */
+  CHAT_PARTIAL = 7,
 }
 // Retrieve enum metadata with: proto3.getEnumType(MessageType)
 proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
@@ -60,7 +65,8 @@ proto3.util.setEnumType(MessageType, "ai.v1.MessageType", [
   { no: 3, name: "MOOD" },
   { no: 4, name: "CORRELATION" },
   { no: 5, name: "ENDSESSION" },
-  { no: 6, name: "CHAT_PARTIAL" },
+  { no: 6, name: "JOURNAL" },
+  { no: 7, name: "CHAT_PARTIAL" },
 ]);
 
 /**

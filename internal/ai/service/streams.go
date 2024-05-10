@@ -11,6 +11,7 @@ import (
 
 type SessionState struct {
 	HasCalledParseActivities bool
+	HasCalledParseFood       bool
 }
 
 type StreamStore struct {

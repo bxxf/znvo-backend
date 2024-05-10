@@ -36,7 +36,7 @@ func NewTokenRepository(config *envconfig.EnvConfig, logger *logger.LoggerInstan
 }
 
 func (r *TokenRepository) CreateAccessToken(userID string) (string, error) {
-	expiry := time.Now().Add(time.Minute * 15) // 15 minutes
+	expiry := time.Now().Add(time.Minute * 30) // 30 minutes
 	token, err := r.generateJWT(userID, expiry.Unix())
 	if err != nil {
 		log.Printf("could not generate token: %v", err)

@@ -17,7 +17,8 @@ enum MessageType {
     MOOD = 3;
     CORRELATION = 4;
     ENDSESSION = 5;
-    CHAT_PARTIAL = 6;   
+    JOURNAL = 6;
+    CHAT_PARTIAL = 7;   
 }
 
 // The AI service is responsible for handling the requests calling the LLM model.

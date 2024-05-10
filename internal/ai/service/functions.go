@@ -52,12 +52,46 @@ var AvailableTools = []llms.Tool{
 			},
 		},
 	},
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "parseFood",
+			Description: "Get user's food for the day based on their responses and return it in a structured format",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"meals": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"name": map[string]any{
+									"type":        "string",
+									"description": "Full name of the food (e.g., 'Apple', 'Pizza', 'Salad')",
+								},
+								"time": map[string]any{
+									"type":        "number",
+									"description": "How long AGO the food was eaten in MINUTES (e.g., 5, 10, 15, 120). Can be empty or 0 if the user doesn't know the time OR if it's happening now - 0 means the food was eaten now. If the food was eaten now, the time should be 0.",
+								},
+								"mood": map[string]any{
+									"type":        "number",
+									"description": "Mood level of the user after eating the food (0-100) - can be on a scale 1-10 (times ten). If the user doesn't know the mood, it can be empty. DO NOT GUESS.",
+								},
+							},
+							"required": []string{"name", "mood", "time"},
+						},
+					},
+				},
+				"required": []string{"activities"},
+			},
+		},
+	},
 
 	{
 		Type: "function",
 		Function: &llms.FunctionDefinition{
 			Name:        "endSession",
-			Description: "End the session. Gets called after all steps are done or 'endSession' is prompted",
+			Description: "End the session. This gets called at the end of the conversation to close the session or ENDSESSION prompt",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -77,10 +111,13 @@ func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.
 	if len(resp.Choices[0].ToolCalls) == 0 {
 		return messageHistory, nil
 	}
+
 	switch resp.Choices[0].ToolCalls[0].FunctionCall.Name {
 
 	case "parseActivities":
 		return messageHistory, s.handleParseActivities(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID, messageID)
+	case "parseFood":
+		return messageHistory, s.handleParseFood(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID, messageID)
 	case "endSession":
 		return messageHistory, s.handleEndSession(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID)
 	default:
@@ -134,6 +171,62 @@ func (s *AiService) handleParseActivities(args string, streamID string, messageI
 		MessageId:   messageId,
 		SessionId:   streamID,
 		MessageType: aiv1.MessageType_ACTIVITIES,
+	})
+
+	return nil
+}
+
+type Meal struct {
+	Name string `json:"name"`
+	Time int    `json:"time"`
+	Mood int    `json:"mood"`
+}
+
+func (s *AiService) handleParseFood(args string, streamID string, messageId string) error {
+	var meals struct {
+		Meals []Meal `json:"meals"`
+	}
+	if err := json.Unmarshal([]byte(args), &meals); err != nil {
+		return err
+	}
+
+	state, exists := s.streamStore.sessionState[streamID]
+	if !exists {
+		return fmt.Errorf("session state not found")
+	}
+
+	if state.HasCalledParseFood {
+		s.logger.Info("parseFood has already been called for this session: ", streamID)
+		return nil
+	}
+
+	state.HasCalledParseFood = true
+
+	for i, meal := range meals.Meals {
+		currentTime := time.Now()
+
+		if meal.Time > 0 {
+			currentTime = currentTime.Add(time.Duration(-meal.Time) * time.Minute)
+		}
+
+		meal.Time = int(currentTime.Unix())
+
+		meals.Meals[i] = meal
+
+	}
+
+	responseJSON, err := json.Marshal(meals.Meals)
+	if err != nil {
+		return err
+	}
+
+	s.logger.Info("Adding food to session: ", streamID)
+
+	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+		Message:     string(responseJSON),
+		MessageId:   messageId,
+		SessionId:   streamID,
+		MessageType: aiv1.MessageType_NUTRITION,
 	})
 
 	return nil

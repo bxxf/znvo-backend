@@ -148,7 +148,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	skipStreaming := false
 
 	// Generate content based on the message history
-	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools), llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools), llms.WithTemperature(0.35), llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
 
 		// if chunk is json skip streaming for whole message id
 		if strings.Contains(string(chunk), "{") {
@@ -182,23 +182,50 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	if resp.Choices[0].FuncCall == nil {
 		newHistory = append(newHistory, llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content))
 		outputMessage = resp.Choices[0].Content
+		s.chatService.SaveMessageHistory(&newHistory, sessionID)
+
 	} else if resp.Choices[0].FuncCall.Name != endSessionFuncName {
+		s.chatService.SaveMessageHistory(&newHistory, sessionID)
+
+		var afterFuncRes *StartConversationResponse
 		// If the function call is not endSession, recursively call message sending
-		afterFuncRes, err := s.SendMessage(ctx, sessionID, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", MessageTypeAI)
+		if resp.Choices[0].FuncCall.Name != "parseFood" {
+			afterFuncRes, err = s.SendMessage(ctx, sessionID, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", MessageTypeAI)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			afterFuncRes, err = s.SendMessage(ctx, sessionID, "COMPLETED. END THE SESSION by calling endSession function.", MessageTypeAI)
+			if err != nil {
+				return nil, err
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+		messageHistoryPointer, err := s.chatService.LoadMessageHistory(sessionID)
 		if err != nil {
+			s.logger.Error("Failed to load message history: ", err)
 			return nil, err
 		}
+		msgHistory = *messageHistoryPointer
+		s.chatService.SaveMessageHistory(&msgHistory, sessionID)
 		outputMessage = afterFuncRes.Message
 	} else {
 		// If the function call is endSession, close the session
 		s.CloseSession(sessionID)
-
+		s.streamStore.SendMessage(
+			sessionID,
+			&ai.StartSessionResponse{
+				Message:     "Session ended",
+				SessionId:   sessionID,
+				MessageId:   messageId,
+				MessageType: ai.MessageType_ENDSESSION,
+			},
+		)
 	}
-
-	s.chatService.SaveMessageHistory(&newHistory, sessionID)
 
 	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
 	s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
+	s.logger.Debug("Message history: ", msgHistory)
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
