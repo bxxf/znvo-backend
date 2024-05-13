@@ -34,6 +34,7 @@ type AiService struct {
 	llm         *openai.LLM
 	streamStore *StreamStore
 	chatService *chat.ChatService
+	handlers    map[string]func(string, string, string) error
 }
 
 // StartConversationResponse represents the response from starting a conversation
@@ -56,7 +57,7 @@ func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore, chatS
 
 // InitializeModel initializes the AI model
 func InitializeModel() *openai.LLM {
-	llm, err := openai.New(openai.WithModel("gpt-3.5-turbo"))
+	llm, err := openai.New(openai.WithModel("gpt-4-0125-preview"))
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +75,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	}
 
 	// Generate first message based on the prompt
-	resp, err := s.llm.GenerateContent(ctx, messageHistory, llms.WithTools(AvailableTools))
+	resp, err := llms.GenerateFromSinglePrompt(ctx, s.llm, prompt.Prompt)
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
@@ -82,7 +83,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 
 	// Create message content struct for the response
 	newContent := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content),
+		llms.TextParts(llms.ChatMessageTypeAI, resp),
 	}
 
 	messageHistory = append(messageHistory, newContent...)
@@ -98,7 +99,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	}
 
 	return &StartConversationResponse{
-		Message:   resp.Choices[0].Content,
+		Message:   resp,
 		SessionID: sessionID,
 	}, nil
 }
@@ -134,7 +135,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	skipStreaming := false
 
 	// Generate content based on the message history
-	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools), llms.WithTemperature(0.35), llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+	resp, err := s.llm.GenerateContent(ctx, msgHistory, llms.WithTools(AvailableTools), llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
 
 		// if chunk is json skip streaming for whole message id
 		if strings.Contains(string(chunk), "{") {

@@ -109,18 +109,41 @@ func (s *AiService) ExecuteToolCalls(ctx context.Context, messageHistory []llms.
 		return messageHistory, nil
 	}
 
-	handlerMap := map[string]func(string, string, string) error{
-		"parseActivities": s.handleParseActivities,
-		"parseFood":       s.handleParseFood,
-		"endSession":      s.handleEndSession,
+	s.handlers = map[string]func(string, string, string) error{
+		"parseActivities":         s.handleParseActivities,
+		"parseFood":               s.handleParseFood,
+		"endSession":              s.handleEndSession,
+		"multi_tool_use.parallel": s.handleMultiToolUseParallel,
 	}
 
-	if handler, ok := handlerMap[resp.Choices[0].ToolCalls[0].FunctionCall.Name]; ok {
+	if handler, ok := s.handlers[resp.Choices[0].ToolCalls[0].FunctionCall.Name]; ok {
 		return messageHistory, handler(resp.Choices[0].ToolCalls[0].FunctionCall.Arguments, streamID, messageID)
 	}
 
 	s.logger.Info("Unknown tool call: ", resp.Choices[0].ToolCalls[0].FunctionCall.Name)
 	return messageHistory, fmt.Errorf("unknown tool call: %s", resp.Choices[0].ToolCalls[0].FunctionCall.Name)
+}
+
+func (s *AiService) handleMultiToolUseParallel(args string, streamID string, messageId string) error {
+	var toolCalls struct {
+		ToolCalls []llms.ToolCall `json:"toolCalls"`
+	}
+	if err := json.Unmarshal([]byte(args), &toolCalls); err != nil {
+		return fmt.Errorf("failed to unmarshal tool calls: %v", err)
+	}
+	fmt.Printf("toolCalls: %v\n", toolCalls)
+
+	for _, toolCall := range toolCalls.ToolCalls {
+		if handler, ok := s.handlers[toolCall.FunctionCall.Name]; ok {
+			if err := handler(toolCall.FunctionCall.Arguments, streamID, messageId); err != nil {
+				return err
+			}
+		} else {
+			s.logger.Info("Unknown tool call: ", toolCall.FunctionCall.Name)
+			return fmt.Errorf("unknown tool call: %s", toolCall.FunctionCall.Name)
+		}
+	}
+	return nil
 }
 
 func (s *AiService) handleParseActivities(args string, streamID string, messageId string) error {
