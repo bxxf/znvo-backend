@@ -32,6 +32,7 @@ const (
 type AiService struct {
 	logger      *logger.LoggerInstance
 	llm         *openai.LLM
+	llm3_5      *openai.LLM
 	streamStore *StreamStore
 	chatService *chat.ChatService
 	handlers    map[string]func(string, string, string) error
@@ -46,18 +47,20 @@ type StartConversationResponse struct {
 
 // NewAiService creates a new instance of the AI service
 func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore, chatService *chat.ChatService) *AiService {
-	llm := InitializeModel()
+	llm := InitializeModel("gpt-4-0125-preview")
+	llm3_5 := InitializeModel("gpt-3.5-turbo")
 	return &AiService{
 		logger:      logger,
 		streamStore: streamStore,
 		chatService: chatService,
 		llm:         llm,
+		llm3_5:      llm3_5,
 	}
 }
 
 // InitializeModel initializes the AI model
-func InitializeModel() *openai.LLM {
-	llm, err := openai.New(openai.WithModel("gpt-4-0125-preview"))
+func InitializeModel(model string) *openai.LLM {
+	llm, err := openai.New(openai.WithModel(model))
 	if err != nil {
 		panic(err)
 	}
@@ -74,8 +77,8 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 		llms.TextParts(llms.ChatMessageTypeSystem, prompt.Prompt),
 	}
 
-	// Generate first message based on the prompt
-	resp, err := llms.GenerateFromSinglePrompt(ctx, s.llm, prompt.Prompt)
+	// Generate first message based on the prompt - use the GPT-3.5 model for faster first response
+	resp, err := s.llm3_5.GenerateContent(ctx, messageHistory, llms.WithTools(AvailableTools))
 	if err != nil {
 		s.logger.Error("Failed to generate content: ", err)
 		return nil, err
@@ -83,7 +86,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 
 	// Create message content struct for the response
 	newContent := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeAI, resp),
+		llms.TextParts(llms.ChatMessageTypeAI, resp.Choices[0].Content),
 	}
 
 	messageHistory = append(messageHistory, newContent...)
@@ -99,7 +102,7 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	}
 
 	return &StartConversationResponse{
-		Message:   resp,
+		Message:   resp.Choices[0].Content,
 		SessionID: sessionID,
 	}, nil
 }
