@@ -76,7 +76,6 @@ func (ar *AiRouter) StartSession(
 		select {
 		case <-ctx.Done():
 			fmt.Println("Stream context cancelled, closing stream")
-			ar.aiService.CloseSession(resp.SessionID)
 			ar.streamStore.CloseSession(resp.SessionID)
 			return ctx.Err()
 		default:
@@ -111,7 +110,6 @@ func (ar *AiRouter) SendMsg(ctx context.Context, req *connect.Request[aiv1.SendM
 	}
 
 	go func() {
-
 		resp, err := ar.aiService.SendMessage(contx, sessionID, message, service.MessageTypeUser)
 
 		if err != nil {
@@ -124,7 +122,6 @@ func (ar *AiRouter) SendMsg(ctx context.Context, req *connect.Request[aiv1.SendM
 			SessionId:   resp.SessionID,
 			MessageType: aiv1.MessageType_CHAT,
 		})
-
 	}()
 	return &connect.Response[aiv1.SendMsgResponse]{
 		Msg: &aiv1.SendMsgResponse{

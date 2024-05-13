@@ -14,9 +14,9 @@ import (
 
 // GenerateKey creates a new random key for encrypting messages. This key is used once per session or message to ensure security.
 func (cs *ChatService) GenerateKey() ([]byte, error) {
-	key := make([]byte, 32) // Generate a 256-bit key for strong encryption.
+	key := make([]byte, 32) // Generate a 256-bit key for AES encryption
 	if _, err := rand.Read(key); err != nil {
-		return nil, err // Error handling in case of failure to generate a key.
+		return nil, err // Error handling in case of failure to generate a key
 	}
 	return key, nil
 }
@@ -64,19 +64,18 @@ func (cs *ChatService) Encrypt(data []byte) (string, []byte, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	// GCM (Galois/Counter Mode) is a mode of operation for symmetric key cryptographic block ciphers.
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return "", nil, err
 	}
-	// Nonce is a random number used only once in cryptographic communication.
+	// Nonce is a random number used only once in cryptographic communication
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return "", nil, err
 	}
-	// Seal encrypts and authenticates plaintext, authenticates the additional data, and appends the result to dst, returning the updated slice.
+	// Seal encrypts and authenticates plaintext
 	cipherText := gcm.Seal(nonce, nonce, data, nil)
-	// Encrypt the DEK using the master key from Google KMS.
+	// Encrypt the DEK using the master key from Google KMS
 	encryptedDEK, err := cs.EncryptDataKey(dek)
 	if err != nil {
 		return "", nil, err
@@ -84,7 +83,7 @@ func (cs *ChatService) Encrypt(data []byte) (string, []byte, error) {
 	return base64.StdEncoding.EncodeToString(cipherText), []byte(encryptedDEK), nil
 }
 
-// Decrypt takes encrypted chat messages and the encrypted session key (DEK), decrypts the DEK, and uses it to decrypt the message, ensuring privacy.
+// Decrypt takes encrypted chat messages and the encrypted session key
 func (cs *ChatService) Decrypt(cipherText string, encryptedDEK string) ([]byte, error) {
 	dek, err := cs.DecryptDataKey(encryptedDEK)
 	if err != nil {

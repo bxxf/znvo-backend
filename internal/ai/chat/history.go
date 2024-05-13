@@ -22,7 +22,7 @@ type CustomPart struct {
 
 type SessionData struct {
 	EncryptedMessages string
-	EncryptedKey      string // Store encrypted DEK as a base64 string
+	EncryptedKey      string
 }
 
 var SessionMap = struct {
@@ -52,9 +52,8 @@ func (cs *ChatService) SaveMessageHistory(messages *[]llms.MessageContent, id st
 		return "", err
 	}
 
-	// Use Redis SET command to store session data
 	ctx := context.Background()
-	// adter hour it will expire
+	// Save the encrypted message history in Redis
 	if err := cs.redisClient.Set(ctx, "chist:"+id, sessionDataJSON, time.Duration(time.Minute*60)).Err(); err != nil {
 		return "", fmt.Errorf("failed to save in Redis: %v", err)
 	}

@@ -67,6 +67,12 @@ func (s *StreamStore) SendMessage(sessionID string, msg *aiv1.StartSessionRespon
 
 func (s *StreamStore) CloseSession(sessionID string) {
 	fmt.Printf("Closing session %s\n", sessionID)
+	s.SendMessage(sessionID, &aiv1.StartSessionResponse{
+		Message:     "Session ended",
+		SessionId:   sessionID,
+		MessageType: aiv1.MessageType_ENDSESSION,
+	})
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, exists := s.streams[sessionID]; !exists {

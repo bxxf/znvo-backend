@@ -82,8 +82,6 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID stri
 		return nil, utils.HandleError(err, "failed to marshal credential", *as.logger)
 	}
 
-	// TOOO. encrypt the credential before storing in Redis
-
 	go func() {
 		redisClient := as.redisService.GetClient()
 		_, err = redisClient.Set(redisClient.Context(), "cred:"+userID, string(credJson), 0).Result()
@@ -93,7 +91,6 @@ func (as *AuthService) FinishRegister(session *webauthn.SessionData, userID stri
 
 	}()
 
-	// TODO: STORE public key in database
 	return credential, nil
 }
 

@@ -145,7 +145,7 @@ func hybridEncrypt(publicKeySpki string, data string) (string, string, error) {
 	}
 
 	// Generate AES key
-	aesKey := make([]byte, 32) // 256-bit AES key
+	aesKey := make([]byte, 32)
 	if _, err := rand.Read(aesKey); err != nil {
 		return "", "", err
 	}

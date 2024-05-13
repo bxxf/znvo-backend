@@ -103,20 +103,6 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	}, nil
 }
 
-// generateUniqueSessionID generates a unique session ID
-func (s *AiService) generateUniqueSessionID() string {
-	sessionID := cuid2.Generate()
-	for {
-		_, found := s.streamStore.GetStream(sessionID)
-		if !found {
-			break
-		}
-		s.logger.Error("Stream already exists")
-		sessionID = cuid2.Generate()
-	}
-	return sessionID
-}
-
 // SendMessage sends a message to the AI model and returns the response
 func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, messageType MessageType) (*StartConversationResponse, error) {
 	var outputMessage string
@@ -188,20 +174,12 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 		s.chatService.SaveMessageHistory(&newHistory, sessionID)
 
 		var afterFuncRes *StartConversationResponse
-		// If the function call is not endSession, recursively call message sending
-		if resp.Choices[0].FuncCall.Name != "parseFood" {
-			afterFuncRes, err = s.SendMessage(ctx, sessionID, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", MessageTypeAI)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			afterFuncRes, err = s.SendMessage(ctx, sessionID, "COMPLETED. END THE SESSION by calling endSession function.", MessageTypeAI)
-			if err != nil {
-				return nil, err
-			}
+		afterFuncRes, err = s.SendMessage(ctx, sessionID, resp.Choices[0].FuncCall.Name+" completed. Continue to another step.", MessageTypeAI)
+		if err != nil {
+			return nil, err
 		}
-		time.Sleep(100 * time.Millisecond)
 		messageHistoryPointer, err := s.chatService.LoadMessageHistory(sessionID)
+
 		if err != nil {
 			s.logger.Error("Failed to load message history: ", err)
 			return nil, err
@@ -210,22 +188,13 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 		s.chatService.SaveMessageHistory(&msgHistory, sessionID)
 		outputMessage = afterFuncRes.Message
 	} else {
-		// If the function call is endSession, close the session
-		s.CloseSession(sessionID)
-		s.streamStore.SendMessage(
-			sessionID,
-			&ai.StartSessionResponse{
-				Message:     "Session ended",
-				SessionId:   sessionID,
-				MessageId:   messageId,
-				MessageType: ai.MessageType_ENDSESSION,
-			},
-		)
+		s.streamStore.CloseSession(sessionID)
+		s.chatService.DeleteChatHistory(sessionID)
 	}
 
-	s.logger.Debug("Message sent: ", resp.Choices[0].Content)
-	s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
-	s.logger.Debug("Message history: ", msgHistory)
+	//s.logger.Debug("Message sent: ", resp.Choices[0].Content)
+	//s.logger.Debug("Function call: ", resp.Choices[0].FuncCall)
+	//s.logger.Debug("Message history: ", msgHistory)
 
 	return &StartConversationResponse{
 		Message:   outputMessage,
@@ -234,8 +203,15 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 	}, nil
 }
 
-// CloseSession closes the session and deletes the chat history
-func (s *AiService) CloseSession(sessionID string) {
-	s.streamStore.CloseSession(sessionID)
-	s.chatService.DeleteChatHistory(sessionID)
+func (s *AiService) generateUniqueSessionID() string {
+	sessionID := cuid2.Generate()
+	for {
+		_, found := s.streamStore.GetStream(sessionID)
+		if !found {
+			break
+		}
+		s.logger.Error("Stream already exists")
+		sessionID = cuid2.Generate()
+	}
+	return sessionID
 }
