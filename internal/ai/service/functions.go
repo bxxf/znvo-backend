@@ -154,10 +154,6 @@ func (s *AiService) handleParseActivities(args string, streamID string, messageI
 		return fmt.Errorf("failed to unmarshal activities: %v", err)
 	}
 
-	if err := s.checkAndUpdateSessionState(streamID, "parseActivities"); err != nil {
-		return err
-	}
-
 	activities.Activities = updateActivityTimes(activities.Activities)
 
 	responseJSON, err := json.Marshal(activities.Activities)
@@ -165,12 +161,21 @@ func (s *AiService) handleParseActivities(args string, streamID string, messageI
 		return fmt.Errorf("failed to marshal activities: %v", err)
 	}
 
-	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+	s.mu.Lock()
+	sessionChannel, ok := s.sessionChannels[streamID]
+	s.mu.Unlock()
+	if !ok {
+		s.logger.Error("No active session for this ID")
+		return nil
+	}
+	message := &ai.StartSessionResponse{
 		Message:     string(responseJSON),
-		MessageId:   messageId,
 		SessionId:   streamID,
+		MessageId:   messageId,
 		MessageType: ai.MessageType_ACTIVITIES,
-	})
+	}
+	sessionChannel <- message
+
 	return nil
 }
 
@@ -182,10 +187,6 @@ func (s *AiService) handleParseFood(args string, streamID string, messageId stri
 		return fmt.Errorf("failed to unmarshal meals: %v", err)
 	}
 
-	if err := s.checkAndUpdateSessionState(streamID, "parseFood"); err != nil {
-		return err
-	}
-
 	meals.Meals = updateMealTimes(meals.Meals)
 
 	responseJSON, err := json.Marshal(meals.Meals)
@@ -194,10 +195,11 @@ func (s *AiService) handleParseFood(args string, streamID string, messageId stri
 	}
 
 	s.logger.Info("Adding food to session: ", streamID)
-	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+
+	s.sendMessageViaChannel(&ai.StartSessionResponse{
 		Message:     string(responseJSON),
-		MessageId:   messageId,
 		SessionId:   streamID,
+		MessageId:   messageId,
 		MessageType: ai.MessageType_NUTRITION,
 	})
 	return nil
@@ -211,7 +213,7 @@ func (s *AiService) handleEndSession(args string, streamID string, placeholder s
 		return fmt.Errorf("failed to unmarshal end session message: %v", err)
 	}
 
-	s.streamStore.SendMessage(streamID, &ai.StartSessionResponse{
+	s.sendMessageViaChannel(&ai.StartSessionResponse{
 		Message:     message.Message,
 		SessionId:   streamID,
 		MessageId:   "end",
@@ -219,29 +221,6 @@ func (s *AiService) handleEndSession(args string, streamID string, placeholder s
 	})
 
 	s.chatService.DeleteChatHistory(streamID)
-	return nil
-}
-
-func (s *AiService) checkAndUpdateSessionState(streamID, functionName string) error {
-	state, exists := s.streamStore.sessionState[streamID]
-	if !exists {
-		return fmt.Errorf("session state not found for stream ID: %s", streamID)
-	}
-
-	if functionName == "parseActivities" && state.HasCalledParseActivities {
-		s.logger.Info("parseActivities has already been called for this session: ", streamID)
-		return fmt.Errorf("parseActivities has already been called for this session: %s", streamID)
-	} else if functionName == "parseFood" && state.HasCalledParseFood {
-		s.logger.Info("parseFood has already been called for this session: ", streamID)
-		return fmt.Errorf("parseFood has already been called for this session: %s", streamID)
-	}
-
-	if functionName == "parseActivities" {
-		state.HasCalledParseActivities = true
-	} else if functionName == "parseFood" {
-		state.HasCalledParseFood = true
-	}
-
 	return nil
 }
 

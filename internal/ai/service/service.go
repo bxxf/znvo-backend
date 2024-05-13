@@ -3,13 +3,16 @@ package service
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/nrednav/cuid2"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 
 	"github.com/bxxf/znvo-backend/gen/api/ai/v1"
+	aiv1 "github.com/bxxf/znvo-backend/gen/api/ai/v1"
 	"github.com/bxxf/znvo-backend/internal/ai/chat"
 	"github.com/bxxf/znvo-backend/internal/ai/prompt"
 	"github.com/bxxf/znvo-backend/internal/logger"
@@ -30,12 +33,13 @@ const (
 
 // AiService represents the AI service
 type AiService struct {
-	logger      *logger.LoggerInstance
-	llm         *openai.LLM
-	llm3_5      *openai.LLM
-	streamStore *StreamStore
-	chatService *chat.ChatService
-	handlers    map[string]func(string, string, string) error
+	logger          *logger.LoggerInstance
+	llm             *openai.LLM
+	llm3_5          *openai.LLM
+	sessionChannels map[string]chan *ai.StartSessionResponse
+	chatService     *chat.ChatService
+	handlers        map[string]func(string, string, string) error
+	mu              sync.Mutex
 }
 
 // StartConversationResponse represents the response from starting a conversation
@@ -50,12 +54,34 @@ func NewAiService(logger *logger.LoggerInstance, streamStore *StreamStore, chatS
 	llm := InitializeModel("gpt-4-0125-preview")
 	llm3_5 := InitializeModel("gpt-3.5-turbo")
 	return &AiService{
-		logger:      logger,
-		streamStore: streamStore,
-		chatService: chatService,
-		llm:         llm,
-		llm3_5:      llm3_5,
+		logger:          logger,
+		sessionChannels: make(map[string]chan *ai.StartSessionResponse),
+		chatService:     chatService,
+		llm:             llm,
+		llm3_5:          llm3_5,
+		mu:              sync.Mutex{},
 	}
+}
+
+func (s *AiService) StartSession(ctx context.Context, sessionID string, stream *connect.ServerStream[aiv1.StartSessionResponse]) error {
+	sessionChannel := make(chan *ai.StartSessionResponse, 100)
+	s.mu.Lock()
+	s.sessionChannels[sessionID] = sessionChannel
+	s.mu.Unlock()
+
+	go s.handleSession(sessionID, sessionChannel, stream)
+	return nil
+}
+
+func (s *AiService) handleSession(sessionID string, ch chan *ai.StartSessionResponse, stream *connect.ServerStream[aiv1.StartSessionResponse]) {
+	defer close(ch)
+
+	for response := range ch {
+		stream.Send(response)
+	}
+	s.mu.Lock()
+	delete(s.sessionChannels, sessionID)
+	s.mu.Unlock()
 }
 
 // InitializeModel initializes the AI model
@@ -68,7 +94,7 @@ func InitializeModel(model string) *openai.LLM {
 }
 
 // StartConversation starts a conversation with the AI model and returns the response
-func (s *AiService) StartConversation(ctx context.Context) (*StartConversationResponse, error) {
+func (s *AiService) StartConversation(ctx context.Context, stream *connect.ServerStream[aiv1.StartSessionResponse]) (*StartConversationResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, conversationTimeout)
 	defer cancel()
 
@@ -98,6 +124,14 @@ func (s *AiService) StartConversation(ctx context.Context) (*StartConversationRe
 	_, err = s.chatService.SaveMessageHistory(&messageHistory, sessionID)
 	if err != nil {
 		s.logger.Error("Failed to save message history: ", err)
+		return nil, err
+	}
+
+	// start stream session
+
+	err = s.StartSession(ctx, sessionID, stream)
+	if err != nil {
+		s.logger.Error("Failed to start session: ", err)
 		return nil, err
 	}
 
@@ -146,8 +180,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 		}
 
 		if !skipStreaming {
-
-			s.streamStore.SendMessage(sessionID, &ai.StartSessionResponse{
+			s.sendMessageViaChannel(&ai.StartSessionResponse{
 				Message:     string(chunk),
 				SessionId:   sessionID,
 				MessageId:   messageId,
@@ -192,7 +225,6 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 		s.chatService.SaveMessageHistory(&msgHistory, sessionID)
 		outputMessage = afterFuncRes.Message
 	} else {
-		s.streamStore.CloseSession(sessionID)
 		s.chatService.DeleteChatHistory(sessionID)
 	}
 
@@ -210,7 +242,7 @@ func (s *AiService) SendMessage(ctx context.Context, sessionID, message string, 
 func (s *AiService) generateUniqueSessionID() string {
 	sessionID := cuid2.Generate()
 	for {
-		_, found := s.streamStore.GetStream(sessionID)
+		_, found := s.sessionChannels[sessionID]
 		if !found {
 			break
 		}
@@ -218,4 +250,16 @@ func (s *AiService) generateUniqueSessionID() string {
 		sessionID = cuid2.Generate()
 	}
 	return sessionID
+}
+
+func (s *AiService) sendMessageViaChannel(message *ai.StartSessionResponse) {
+	s.mu.Lock()
+	sessionChannel, ok := s.sessionChannels[message.SessionId]
+	s.mu.Unlock()
+	if !ok {
+		s.logger.Error("No active session for this ID")
+		return
+	}
+
+	sessionChannel <- message
 }

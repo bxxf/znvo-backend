@@ -59,7 +59,7 @@ func (ar *AiRouter) StartSession(
 
 	ar.logger.Debug("Starting session for user " + parsedToken.UserID)
 
-	resp, err := ar.aiService.StartConversation(contx)
+	resp, err := ar.aiService.StartConversation(contx, stream)
 	if err != nil {
 		return status.Error(codes.Internal, "Failed to start conversation")
 	}
