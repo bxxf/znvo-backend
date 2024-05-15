@@ -66,7 +66,13 @@ func (ar *AuthRouter) InitializeRegister(ctx context.Context, req *connect.Reque
 
 	// Generate random user ID
 	userID := generate()
-	// TODO: Check if user already exists in the database
+	res, err := ar.database.UserExists(userID)
+	if err != nil {
+		return nil, err
+	}
+	if res {
+		userID = generate()
+	}
 	ar.logger.Debug("Initializing registration for user " + userID)
 
 	// Initialize registration process thru webauthn
